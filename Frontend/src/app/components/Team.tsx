@@ -1,0 +1,151 @@
+
+import { Card, CardContent } from "./ui/card";
+import { Button } from "./ui/button";
+import { Phone, Mail, User } from "lucide-react";
+import { ImageWithFallback } from "./figma/ImageWithFallback";
+
+export function Team() {
+  const handleCall = () => {
+    window.location.href = "tel:+918261861224";
+  };
+
+  const handleEmailSupport = () => {
+    window.location.href = "mailto:support@bitwix.co.in?subject=General Inquiry&body=Hello Bitwix Team,%0D%0A%0D%0AI would like to get in touch regarding your services.%0D%0A%0D%0AThank you.";
+  };
+
+  const handleEmailProject = (memberName: string) => {
+    window.location.href = `mailto:support@bitwix.co.in?subject=Project Discussion with ${memberName}&body=Hello ${memberName},%0D%0A%0D%0AI would like to discuss a project with you. Please get back to me at your earliest convenience.%0D%0A%0D%0AThank you.`;
+  };
+
+  const teamMembers = [
+    {
+      name: "Sunil Hatkadke",
+      role: "Project Manager",
+      description: "Experienced project manager with expertise in delivering complex technology projects on time and within budget. Specializes in client communication and project coordination.",
+      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
+      skills: ["Project Management", "Client Relations", "Agile Methodology", "Team Leadership"],
+      contact: {
+        phone: "+91-8261861224",
+        email: "support@bitwix.co.in"
+      }
+    },
+    {
+      name: "Surekha Misal",
+      role: "HR Executive",
+      description: "Dedicated HR professional focused on building strong teams and maintaining excellent workplace culture. Handles recruitment, employee relations, and organizational development.",
+      image: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face",
+      skills: ["Human Resources", "Recruitment", "Employee Relations", "Training & Development"],
+      contact: {
+        phone: "+91-8261861224",
+        email: "support@bitwix.co.in"
+      }
+    }
+  ];
+
+  return (
+    <section id="team" className="py-20 bg-secondary/20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+            Meet Our Team
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+            Our dedicated professionals bring expertise, passion, and commitment to every project. 
+            Get to know the people who make Bitwix Technologies a trusted technology partner.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+          {teamMembers.map((member, index) => (
+            <Card key={index} className="overflow-hidden hover:shadow-xl transition-shadow">
+              <CardContent className="p-0">
+                <div className="grid grid-cols-1 md:grid-cols-2">
+                  {/* Image Section */}
+                  <div className="relative h-64 md:h-full">
+                    <ImageWithFallback
+                      src={member.image}
+                      alt={member.name}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                  </div>
+
+                  {/* Content Section */}
+                  <div className="p-6">
+                    <div className="mb-4">
+                      <h3 className="text-xl font-bold text-foreground mb-1">{member.name}</h3>
+                      <p className="text-primary font-medium">{member.role}</p>
+                    </div>
+
+                    <p className="text-muted-foreground text-sm mb-4 leading-relaxed">
+                      {member.description}
+                    </p>
+
+                    {/* Skills */}
+                    <div className="mb-6">
+                      <h4 className="font-medium mb-2">Expertise</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {member.skills.map((skill, skillIndex) => (
+                          <span
+                            key={skillIndex}
+                            className="bg-primary/10 text-primary px-2 py-1 rounded-md text-xs"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Contact Buttons */}
+                    <div className="space-y-2">
+                      <Button
+                        size="sm"
+                        onClick={handleCall}
+                        className="w-full flex items-center justify-center gap-2"
+                      >
+                        <Phone className="h-4 w-4" />
+                        Call {member.name}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEmailProject(member.name)}
+                        className="w-full flex items-center justify-center gap-2"
+                      >
+                        <Mail className="h-4 w-4" />
+                        Email {member.name}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Contact CTA */}
+        <div className="bg-white rounded-lg p-8 text-center">
+          <div className="max-w-2xl mx-auto">
+            <h3 className="text-2xl font-bold text-foreground mb-4">
+              Ready to Work With Our Team?
+            </h3>
+            <p className="text-muted-foreground mb-6">
+              Our experienced professionals are ready to help bring your project to life. 
+              Contact us today to discuss your requirements and get started.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button size="lg" onClick={handleCall} className="flex items-center gap-2">
+                <Phone className="h-5 w-5" />
+                Call Our Team
+              </Button>
+              <Button variant="outline" size="lg" onClick={handleEmailSupport} className="flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Send Message
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Bitwix Technologies Private Limited - Expert website development and Android app development services. Transform your ideas into digital reality with our innovative solutions.">
+  <meta name="keywords" content="website development, android app development, web design, mobile app development, software development, UI/UX design, custom development, Bitwix Technologies">
+  <meta name="author" content="Bitwix Technologies Private Limited">
+  <meta name="robots" content="index, follow">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.bitwix.co.in">
+  <meta property="og:title" content="Bitwix Technologies - Website & Android App Development">
+  <meta property="og:description" content="Transform your ideas into digital reality with our expert website development and Android app development services.">
+  <meta property="og:site_name" content="Bitwix Technologies">
+  
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://www.bitwix.co.in">
+  <meta property="twitter:title" content="Bitwix Technologies - Website & Android App Development">
+  <meta property="twitter:description" content="Transform your ideas into digital reality with our expert website development and Android app development services.">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  
+  <!-- Preconnect to external domains for performance -->
+  <link rel="preconnect" href="https://images.unsplash.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="/styles/globals.css">
+  
+  <!-- Phone number for click-to-call -->
+  <meta name="format-detection" content="telephone=+91-8261861224">
+  
+  <!-- Theme color for mobile browsers -->
+  <meta name="theme-color" content="#030213">
+  <meta name="msapplication-TileColor" content="#030213">
+  
+  <!-- Structured Data for SEO -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Bitwix Technologies Private Limited",
+    "url": "https://www.bitwix.co.in",
+    "logo": "https://www.bitwix.co.in/logo.png",
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "telephone": "+91-8261861224",
+      "contactType": "customer service",
+      "email": "support@bitwix.co.in",
+      "availableLanguage": "English"
+    },
+    "address": {
+      "@type": "PostalAddress",
+      "addressCountry": "IN"
+    },
+    "sameAs": [
+      "https://www.bitwix.co.in"
+    ],
+    "description": "Bitwix Technologies Private Limited specializes in website development and Android app development, helping businesses transform their ideas into digital reality.",
+    "founder": {
+      "@type": "Person",
+      "name": "Sunil Hatkadke",
+      "jobTitle": "Project Manager"
+    },
+    "employee": [
+      {
+        "@type": "Person",
+        "name": "Sunil Hatkadke",
+        "jobTitle": "Project Manager"
+      },
+      {
+        "@type": "Person",
+        "name": "Surekha Misal",
+        "jobTitle": "HR Executive"
+      }
+    ],
+    "service": [
+      {
+        "@type": "Service",
+        "name": "Website Development",
+        "description": "Custom website development services including responsive design, e-commerce solutions, and web applications."
+      },
+      {
+        "@type": "Service", 
+        "name": "Android App Development",
+        "description": "Native Android app development with modern UI/UX design and comprehensive functionality."
+      }
+    ]
+  }
+  </script>
+  
+  <title>Bitwix Technologies - Website & Android App Development Services</title>
+</head>
+<body>
+  <noscript>
+    <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+      <h1>Bitwix Technologies Private Limited</h1>
+      <p>This website requires JavaScript to function properly.</p>
+      <p>Please enable JavaScript in your browser to continue.</p>
+      <p>Contact us directly:</p>
+      <p>Phone: <a href="tel:+918261861224">+91-8261861224</a></p>
+      <p>Email: <a href="mailto:support@bitwix.co.in">support@bitwix.co.in</a></p>
+      <p>Website: <a href="https://www.bitwix.co.in">www.bitwix.co.in</a></p>
+    </div>
+  </noscript>
+  
+  <!-- Root element where React app will mount -->
+  <div id="root"></div>
+  
+  <!-- React Application Script -->
+  <script type="module" src="/src/main.tsx"></script>
+  
+  <!-- Emergency contact information (hidden by default, shown if JS fails) -->
+  <div id="emergency-contact" style="display: none; position: fixed; bottom: 20px; right: 20px; background: #030213; color: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 1000;">
+    <h3 style="margin: 0 0 10px 0; font-size: 14px;">Need Help?</h3>
+    <p style="margin: 5px 0; font-size: 12px;">📞 <a href="tel:+918261861224" style="color: white;">+91-8261861224</a></p>
+    <p style="margin: 5px 0; font-size: 12px;">📧 <a href="mailto:support@bitwix.co.in" style="color: white;">support@bitwix.co.in</a></p>
+    <button onclick="this.parentElement.style.display='none'" style="position: absolute; top: 5px; right: 5px; background: none; border: none; color: white; font-size: 16px; cursor: pointer;">×</button>
+  </div>
+  
+  <!-- Simple script to show emergency contact if main app doesn't load -->
+  <script>
+    // Show emergency contact info if React app doesn't load within 5 seconds
+    setTimeout(function() {
+      if (!document.querySelector('#root').innerHTML.trim()) {
+        document.getElementById('emergency-contact').style.display = 'block';
+      }
+    }, 5000);
+    
+    // Analytics placeholder (replace with actual analytics code)
+    // Google Analytics, Facebook Pixel, etc. would go here
+    
+    // Simple error tracking
+    window.addEventListener('error', function(e) {
+      console.error('Application error:', e.error);
+      // You could send this to an error tracking service
+    });
+    
+    // Performance monitoring
+    window.addEventListener('load', function() {
+      const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+      console.log('Page load time:', loadTime + 'ms');
+    });
+  </script>
+</body>
+</html>
