@@ -4,7 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
-import { Phone, Mail, Globe, MapPin, Clock, Send } from "lucide-react";
+import { Phone, Mail, Globe, MapPin, Clock, Send, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { submitContact } from "../lib/api";
+
+type SubmitStatus =
+  | { type: "idle" }
+  | { type: "loading" }
+  | { type: "success"; message: string }
+  | { type: "error"; message: string };
 
 export function Contact() {
   const [formData, setFormData] = useState({
@@ -14,6 +21,7 @@ export function Contact() {
     subject: "",
     message: ""
   });
+  const [status, setStatus] = useState<SubmitStatus>({ type: "idle" });
 
   const handleCall = () => {
     window.location.href = "tel:+918261861224";
@@ -23,10 +31,30 @@ export function Contact() {
     window.location.href = "mailto:support@bitwix.co.in?subject=Contact Form Inquiry&body=Hello Bitwix Team,%0D%0A%0D%0AI am reaching out to discuss potential collaboration.%0D%0A%0D%0AThank you.";
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const emailBody = `Name: ${formData.name}%0D%0AEmail: ${formData.email}%0D%0APhone: ${formData.phone}%0D%0ASubject: ${formData.subject}%0D%0A%0D%0AMessage:%0D%0A${formData.message}`;
-    window.location.href = `mailto:support@bitwix.co.in?subject=${encodeURIComponent(formData.subject || 'Contact Form Submission')}&body=${emailBody}`;
+    setStatus({ type: "loading" });
+    try {
+      const result = await submitContact(formData);
+      if (result.success) {
+        setStatus({
+          type: "success",
+          message: result.message || "Your message has been sent. We'll get back to you soon."
+        });
+        setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
+      } else {
+        const firstError = result.errors ? Object.values(result.errors)[0] : undefined;
+        setStatus({
+          type: "error",
+          message: firstError || result.message || "Something went wrong. Please try again."
+        });
+      }
+    } catch {
+      setStatus({
+        type: "error",
+        message: "Unable to reach the server. Please try again or email us directly."
+      });
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -211,9 +239,36 @@ export function Contact() {
                     />
                   </div>
 
-                  <Button type="submit" size="lg" className="w-full flex items-center gap-2">
-                    <Send className="h-5 w-5" />
-                    Send Message
+                  {status.type === "success" && (
+                    <div className="flex items-start gap-2 rounded-md bg-green-500/10 text-green-700 p-3 text-sm">
+                      <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                      <span>{status.message}</span>
+                    </div>
+                  )}
+                  {status.type === "error" && (
+                    <div className="flex items-start gap-2 rounded-md bg-red-500/10 text-red-700 p-3 text-sm">
+                      <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                      <span>{status.message}</span>
+                    </div>
+                  )}
+
+                  <Button
+                    type="submit"
+                    size="lg"
+                    disabled={status.type === "loading"}
+                    className="w-full flex items-center gap-2"
+                  >
+                    {status.type === "loading" ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-5 w-5" />
+                        Send Message
+                      </>
+                    )}
                   </Button>
                 </form>
               </CardContent>
