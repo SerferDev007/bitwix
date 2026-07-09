@@ -6,13 +6,16 @@ import { ProjectDetailPage } from "./admin/ProjectDetailPage";
 import { EmployeesPage } from "./admin/EmployeesPage";
 import { FinancialPage } from "./admin/FinancialPage";
 import { ClientsPage } from "./admin/ClientsPage";
+import { LoginPage } from "./admin/LoginPage";
+import { RequireAuth } from "./admin/RequireAuth";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<MarketingPage />} />
-        <Route path="/admin" element={<AdminLayout />}>
+        <Route path="/admin/login" element={<LoginPage />} />
+        <Route path="/admin" element={<RequireAuth><AdminLayout /></RequireAuth>}>
           <Route index element={<Navigate to="projects" replace />} />
           <Route path="projects" element={<ProjectsPage />} />
           <Route path="projects/:id" element={<ProjectDetailPage />} />

@@ -6,6 +6,8 @@ import projectRoutes from './projects.js';
 import employeeRoutes from './employees.js';
 import financialRoutes from './financial.js';
 import clientRoutes from './clients.js';
+import authRoutes from './auth.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -18,22 +20,27 @@ const contactLimiter = rateLimit({
   message: { success: false, message: 'Too many messages sent. Please try again later.' },
 });
 
-router.post('/contact', contactLimiter, createContactMessage);
-router.get('/contact', listContactMessages);
+// --- Authentication ---
+router.use('/auth', authRoutes);
 
+// --- Public site endpoints (no auth) ---
+router.post('/contact', contactLimiter, createContactMessage); // visitors submit
 router.get('/services', listServices);
 router.get('/team', listTeamMembers);
 
+// --- Protected admin endpoints (require a valid token) ---
+router.get('/contact', requireAuth, listContactMessages); // admin reads messages
+
 // Project Management module (CPM / PERT / EVM)
-router.use('/projects', projectRoutes);
+router.use('/projects', requireAuth, projectRoutes);
 
 // Employee Management module (Assignment problem / Markov attrition)
-router.use('/employees', employeeRoutes);
+router.use('/employees', requireAuth, employeeRoutes);
 
 // Financial Management module (LP allocation / NPV / break-even)
-router.use('/financial', financialRoutes);
+router.use('/financial', requireAuth, financialRoutes);
 
 // Client Management module (M/M/c queuing / CLV)
-router.use('/clients', clientRoutes);
+router.use('/clients', requireAuth, clientRoutes);
 
 export default router;

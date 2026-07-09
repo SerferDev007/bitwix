@@ -1,5 +1,6 @@
-import { Link, Outlet, useLocation } from "react-router";
-import { LayoutDashboard, FolderKanban, Users, DollarSign, Headset, ArrowLeft } from "lucide-react";
+import { Link, Outlet, useLocation, useNavigate } from "react-router";
+import { LayoutDashboard, FolderKanban, Users, DollarSign, Headset, ArrowLeft, LogOut } from "lucide-react";
+import { authApi } from "../lib/api";
 
 // The four OR domains from the framework. Only Project Management is built out
 // in this iteration; the others are shown as upcoming so the full framework is
@@ -13,6 +14,12 @@ const navItems = [
 
 export function AdminLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const logout = () => {
+    authApi.logout();
+    navigate("/admin/login", { replace: true });
+  };
 
   return (
     <div className="min-h-screen flex bg-muted/30">
@@ -60,7 +67,7 @@ export function AdminLayout() {
           })}
         </nav>
 
-        <div className="p-3 border-t">
+        <div className="p-3 border-t space-y-1">
           <Link
             to="/"
             className="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-muted"
@@ -68,6 +75,13 @@ export function AdminLayout() {
             <ArrowLeft className="h-4 w-4" />
             Back to website
           </Link>
+          <button
+            onClick={logout}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-muted"
+          >
+            <LogOut className="h-4 w-4" />
+            Log out
+          </button>
         </div>
       </aside>
 

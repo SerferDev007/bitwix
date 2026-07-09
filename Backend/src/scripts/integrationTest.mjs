@@ -156,8 +156,46 @@ const check = (name, cond, extra = '') => {
 };
 
 try {
-  let r = await fetch(`${base}/projects`);
-  let j = await r.json();
+  let r;
+  let j;
+
+  // --- Auth: protected routes require a token now ---
+  const rawFetch = globalThis.fetch;
+  // Unauthenticated access to a protected route must be rejected.
+  r = await rawFetch(`${base}/projects`);
+  check('GET /projects without token -> 401', r.status === 401, `got ${r.status}`);
+
+  // Wrong credentials rejected.
+  r = await rawFetch(`${base}/auth/login`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'admin', password: 'wrong' }),
+  });
+  check('POST /auth/login wrong password -> 401', r.status === 401, `got ${r.status}`);
+
+  // Correct credentials return a token.
+  r = await rawFetch(`${base}/auth/login`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'admin', password: 'bitwix123' }),
+  });
+  j = await r.json();
+  const token = j.token;
+  check('POST /auth/login correct -> token issued', r.ok && typeof token === 'string' && token.split('.').length === 3);
+
+  // From here on, transparently attach the token to same-server requests.
+  globalThis.fetch = (url, opts = {}) => {
+    if (typeof url === 'string' && url.startsWith(base)) {
+      opts = { ...opts, headers: { ...(opts.headers || {}), Authorization: `Bearer ${token}` } };
+    }
+    return rawFetch(url, opts);
+  };
+
+  // /me confirms the token identity.
+  r = await fetch(`${base}/auth/me`);
+  j = await r.json();
+  check('GET /auth/me -> admin identity', r.ok && j.user?.username === 'admin', JSON.stringify(j.user));
+
+  r = await fetch(`${base}/projects`);
+  j = await r.json();
   check('GET /projects lists the seeded project', r.ok && j.data?.[0]?.name === 'Feature Delivery');
 
   r = await fetch(`${base}/projects/1/schedule`);

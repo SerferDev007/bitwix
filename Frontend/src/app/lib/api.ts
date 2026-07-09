@@ -20,11 +20,34 @@ export interface ApiResult<T = unknown> {
   id?: number;
 }
 
+// --- Admin auth token (stored in localStorage) ---
+const TOKEN_KEY = "bitwix_admin_token";
+export const authToken = {
+  get: () => (typeof localStorage !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null),
+  set: (t: string) => localStorage.setItem(TOKEN_KEY, t),
+  clear: () => localStorage.removeItem(TOKEN_KEY),
+};
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<ApiResult<T>> {
+  const token = authToken.get();
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {}),
+    },
     ...options,
   });
+
+  // A 401 on anything but the login call means the session expired or is
+  // missing — drop the token and bounce to the login screen.
+  if (res.status === 401 && path !== "/auth/login") {
+    authToken.clear();
+    if (typeof window !== "undefined" && window.location.pathname.startsWith("/admin") &&
+        !window.location.pathname.startsWith("/admin/login")) {
+      window.location.assign("/admin/login");
+    }
+  }
 
   let body: ApiResult<T>;
   try {
@@ -73,6 +96,30 @@ export interface TeamMemberItem {
 export const contentApi = {
   services: () => request<ServiceItem[]>("/services"),
   team: () => request<TeamMemberItem[]>("/team"),
+};
+
+// ---------------------------------------------------------------------------
+// Admin authentication
+// ---------------------------------------------------------------------------
+
+export interface AuthUser {
+  username: string;
+  role: string;
+}
+
+export const authApi = {
+  async login(username: string, password: string) {
+    const res = await request<never>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    });
+    const token = (res as { token?: string }).token;
+    if (res.success && token) authToken.set(token);
+    return res as ApiResult & { token?: string; user?: AuthUser };
+  },
+  me: () => request<never>("/auth/me") as Promise<ApiResult & { user?: AuthUser }>,
+  logout: () => authToken.clear(),
+  isAuthenticated: () => !!authToken.get(),
 };
 
 // ---------------------------------------------------------------------------
