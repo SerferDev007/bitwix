@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { clientsApi, type Portfolio } from "../../lib/api";
+import { useCurrency } from "../../lib/currency";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -10,10 +11,10 @@ import {
 } from "../../components/ui/table";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 
-const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
 const tierColors: Record<string, string> = { strategic: "bg-primary", managed: "bg-blue-500", efficient: "bg-slate-400" };
 
 export function PortfolioTab() {
+  const { format } = useCurrency();
   const [data, setData] = useState<Portfolio | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,10 +47,10 @@ export function PortfolioTab() {
     <div className="space-y-6">
       {data && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Stat label="Total portfolio CLV" value={money(data.totalClv)} />
-          <Stat label="Strategic tier CLV" value={money(data.clvByTier.strategic)} color="text-primary" />
-          <Stat label="Managed tier CLV" value={money(data.clvByTier.managed)} color="text-blue-600" />
-          <Stat label="Efficient tier CLV" value={money(data.clvByTier.efficient)} color="text-slate-500" />
+          <Stat label="Total portfolio CLV" value={format(data.totalClv)} />
+          <Stat label="Strategic tier CLV" value={format(data.clvByTier.strategic)} color="text-primary" />
+          <Stat label="Managed tier CLV" value={format(data.clvByTier.managed)} color="text-blue-600" />
+          <Stat label="Efficient tier CLV" value={format(data.clvByTier.efficient)} color="text-slate-500" />
         </div>
       )}
 
@@ -83,9 +84,9 @@ export function PortfolioTab() {
                 <TableRow key={c.id}>
                   <TableCell>{c.rank}</TableCell>
                   <TableCell className="font-medium">{c.name}{c.notes && <span className="block text-xs text-muted-foreground">{c.notes}</span>}</TableCell>
-                  <TableCell className="text-right">{money(c.annualMargin)}</TableCell>
+                  <TableCell className="text-right">{format(c.annualMargin)}</TableCell>
                   <TableCell className="text-right">{Math.round(c.retentionRate * 100)}%</TableCell>
-                  <TableCell className="text-right font-bold text-primary">{money(c.clv)}</TableCell>
+                  <TableCell className="text-right font-bold text-primary">{format(c.clv)}</TableCell>
                   <TableCell><Badge className={`${tierColors[c.tier]} text-white capitalize`}>{c.tier}</Badge></TableCell>
                   <TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => remove(c.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button></TableCell>
                 </TableRow>

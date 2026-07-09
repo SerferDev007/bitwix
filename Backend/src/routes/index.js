@@ -23,6 +23,17 @@ const contactLimiter = rateLimit({
 // --- Authentication ---
 router.use('/auth', authRoutes);
 
+// --- App settings (public): default currency etc. ---
+router.get('/settings', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      defaultCurrency: process.env.DEFAULT_CURRENCY || 'INR',
+      supportedCurrencies: ['INR', 'USD'],
+    },
+  });
+});
+
 // --- Public site endpoints (no auth) ---
 router.post('/contact', contactLimiter, createContactMessage); // visitors submit
 router.get('/services', listServices);

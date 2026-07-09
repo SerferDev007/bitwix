@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { financialApi, type BreakEven } from "../../lib/api";
+import { useCurrency } from "../../lib/currency";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -9,9 +10,8 @@ import {
 } from "../../components/ui/table";
 import { Loader2, Plus, Trash2, Calculator } from "lucide-react";
 
-const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
-
 export function BreakEvenTab() {
+  const { format } = useCurrency();
   const [rows, setRows] = useState<BreakEven[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +74,7 @@ export function BreakEvenTab() {
           </form>
           {calc && (
             <div className="mt-4 rounded-lg border p-4 flex flex-wrap items-center gap-6">
-              <div><p className="text-xs text-muted-foreground">Contribution / unit</p><p className="text-lg font-bold">{money(calc.contributionMargin)}</p></div>
+              <div><p className="text-xs text-muted-foreground">Contribution / unit</p><p className="text-lg font-bold">{format(calc.contributionMargin)}</p></div>
               <div><p className="text-xs text-muted-foreground">Break-even</p><p className="text-lg font-bold text-primary">{calc.breakEvenUnitsCeil} units <span className="text-sm text-muted-foreground">({calc.breakEvenUnits})</span></p></div>
             </div>
           )}
@@ -93,10 +93,10 @@ export function BreakEvenTab() {
               {rows.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.name}</TableCell>
-                  <TableCell className="text-right">{money(r.fixedCost)}</TableCell>
-                  <TableCell className="text-right">{money(r.price)}</TableCell>
-                  <TableCell className="text-right">{money(r.variableCost)}</TableCell>
-                  <TableCell className="text-right">{money(r.contributionMargin)}</TableCell>
+                  <TableCell className="text-right">{format(r.fixedCost)}</TableCell>
+                  <TableCell className="text-right">{format(r.price)}</TableCell>
+                  <TableCell className="text-right">{format(r.variableCost)}</TableCell>
+                  <TableCell className="text-right">{format(r.contributionMargin)}</TableCell>
                   <TableCell className="text-right font-bold text-primary">{r.breakEvenUnitsCeil}</TableCell>
                   <TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => remove(r.id!)}><Trash2 className="h-4 w-4 text-red-500" /></Button></TableCell>
                 </TableRow>

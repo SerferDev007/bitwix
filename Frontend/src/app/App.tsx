@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
+import { CurrencyProvider } from "./lib/currency";
 import { MarketingPage } from "./pages/MarketingPage";
 import { AdminLayout } from "./admin/AdminLayout";
 import { ProjectsPage } from "./admin/ProjectsPage";
@@ -11,6 +12,7 @@ import { RequireAuth } from "./admin/RequireAuth";
 
 export default function App() {
   return (
+    <CurrencyProvider>
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<MarketingPage />} />
@@ -25,5 +27,6 @@ export default function App() {
         </Route>
       </Routes>
     </BrowserRouter>
+    </CurrencyProvider>
   );
 }

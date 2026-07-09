@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { projectsApi, type Activity, type Project } from "../lib/api";
+import { useCurrency } from "../lib/currency";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Badge } from "../components/ui/badge";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -12,6 +13,7 @@ import { EvmTab } from "./tabs/EvmTab";
 type FullProject = Project & { activities: Activity[]; snapshots: unknown[] };
 
 export function ProjectDetailPage() {
+  const { format } = useCurrency();
   const { id } = useParams();
   const projectId = Number(id);
   const [project, setProject] = useState<FullProject | null>(null);
@@ -52,7 +54,7 @@ export function ProjectDetailPage() {
           <h1 className="text-3xl font-bold">{project.name}</h1>
           <p className="text-muted-foreground mt-1">
             {project.client_name && <>Client: {project.client_name} · </>}
-            {project.bac != null && <>Budget: ${Number(project.bac).toLocaleString()} · </>}
+            {project.bac != null && <>Budget: {format(project.bac)} · </>}
             {project.deadline_days != null && <>Deadline: {project.deadline_days} days</>}
           </p>
         </div>

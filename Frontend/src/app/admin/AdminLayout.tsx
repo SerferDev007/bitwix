@@ -1,6 +1,8 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
 import { LayoutDashboard, FolderKanban, Users, DollarSign, Headset, ArrowLeft, LogOut } from "lucide-react";
 import { authApi } from "../lib/api";
+import { useCurrency, CURRENCIES, type CurrencyCode } from "../lib/currency";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 
 // The four OR domains from the framework. Only Project Management is built out
 // in this iteration; the others are shown as upcoming so the full framework is
@@ -15,6 +17,7 @@ const navItems = [
 export function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { currency, setCurrency } = useCurrency();
 
   const logout = () => {
     authApi.logout();
@@ -68,6 +71,17 @@ export function AdminLayout() {
         </nav>
 
         <div className="p-3 border-t space-y-1">
+          <div className="px-3 py-2">
+            <label className="text-xs text-muted-foreground">Currency</label>
+            <Select value={currency} onValueChange={(v) => setCurrency(v as CurrencyCode)}>
+              <SelectTrigger className="h-8 mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {Object.values(CURRENCIES).map((c) => (
+                  <SelectItem key={c.code} value={c.code}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Link
             to="/"
             className="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-muted"

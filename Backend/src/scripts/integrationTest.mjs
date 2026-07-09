@@ -159,6 +159,12 @@ try {
   let r;
   let j;
 
+  // --- Settings (public) ---
+  r = await fetch(`${base}/settings`);
+  j = await r.json();
+  check('GET /settings -> default currency INR', r.ok && j.data?.defaultCurrency === 'INR', JSON.stringify(j.data));
+  check('GET /settings -> USD is selectable', Array.isArray(j.data?.supportedCurrencies) && j.data.supportedCurrencies.includes('USD'));
+
   // --- Auth: protected routes require a token now ---
   const rawFetch = globalThis.fetch;
   // Unauthenticated access to a protected route must be rejected.

@@ -9,10 +9,10 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "../../components/ui/table";
 import { Loader2, AlertCircle, Plus, Trash2, TrendingDown, TrendingUp } from "lucide-react";
-
-const money = (n: number | null) => (n == null ? "—" : `$${Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 })}`);
+import { useCurrency } from "../../lib/currency";
 
 export function EvmTab({ projectId, bac, onChange }: { projectId: number; bac: string | number | null; onChange: () => void }) {
+  const { format: money } = useCurrency();
   const [snapshots, setSnapshots] = useState<EvmComputed[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

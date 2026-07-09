@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { financialApi, type LpResult } from "../../lib/api";
+import { useCurrency } from "../../lib/currency";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -16,6 +17,7 @@ import { Loader2, AlertCircle, Wand2 } from "lucide-react";
 interface Constraint { coeffs: number[]; op: string; rhs: number; label?: string }
 
 export function CapacityTab() {
+  const { format } = useCurrency();
   const [scenarios, setScenarios] = useState<{ id: number; name: string }[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [labels, setLabels] = useState<string[]>([]);
@@ -139,7 +141,7 @@ export function CapacityTab() {
           <Card className="md:col-span-1">
             <CardContent className="p-5">
               <p className="text-sm text-muted-foreground">Optimal objective</p>
-              <p className="text-3xl font-bold text-primary">{result.objectiveValue.toLocaleString()}</p>
+              <p className="text-3xl font-bold text-primary">{format(result.objectiveValue)}</p>
               <div className="mt-3 space-y-1">
                 {result.solution.map((s) => (
                   <div key={s.label} className="flex justify-between text-sm">

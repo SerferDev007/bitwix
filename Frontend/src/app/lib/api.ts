@@ -99,6 +99,19 @@ export const contentApi = {
 };
 
 // ---------------------------------------------------------------------------
+// App settings
+// ---------------------------------------------------------------------------
+
+export interface AppSettings {
+  defaultCurrency: string;
+  supportedCurrencies: string[];
+}
+
+export const settingsApi = {
+  get: () => request<AppSettings>("/settings"),
+};
+
+// ---------------------------------------------------------------------------
 // Admin authentication
 // ---------------------------------------------------------------------------
 

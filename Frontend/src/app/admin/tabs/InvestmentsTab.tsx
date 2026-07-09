@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { financialApi, type InvestmentRanked } from "../../lib/api";
+import { useCurrency } from "../../lib/currency";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -10,9 +11,8 @@ import {
 } from "../../components/ui/table";
 import { Loader2, Plus, Trash2, Trophy } from "lucide-react";
 
-const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
-
 export function InvestmentsTab() {
+  const { format } = useCurrency();
   const [rows, setRows] = useState<InvestmentRanked[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,9 +79,9 @@ export function InvestmentsTab() {
                 <TableRow key={r.id} className={r.rank === 1 ? "bg-green-500/5" : ""}>
                   <TableCell>{r.rank === 1 ? <Trophy className="h-4 w-4 text-amber-500" /> : r.rank}</TableCell>
                   <TableCell className="font-medium">{r.name}</TableCell>
-                  <TableCell className="text-right">{money(r.initialInvestment)}</TableCell>
-                  <TableCell className="text-right">{money(r.pvOfInflows)}</TableCell>
-                  <TableCell className={`text-right font-medium ${r.npv >= 0 ? "text-green-600" : "text-red-600"}`}>{money(r.npv)}</TableCell>
+                  <TableCell className="text-right">{format(r.initialInvestment)}</TableCell>
+                  <TableCell className="text-right">{format(r.pvOfInflows)}</TableCell>
+                  <TableCell className={`text-right font-medium ${r.npv >= 0 ? "text-green-600" : "text-red-600"}`}>{format(r.npv)}</TableCell>
                   <TableCell className="text-right">{r.profitabilityIndex != null ? r.profitabilityIndex.toFixed(2) : "—"}</TableCell>
                   <TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => remove(r.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button></TableCell>
                 </TableRow>
