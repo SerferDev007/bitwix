@@ -1,7 +1,8 @@
 
 import { useState } from "react";
+import { Link } from "react-router";
 import { Button } from "./ui/button";
-import { Phone, Mail, Menu, X } from "lucide-react";
+import { Phone, Mail, Menu, X, LayoutDashboard } from "lucide-react";
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -35,6 +36,9 @@ export function Header() {
             <a href="#services" className="text-foreground hover:text-primary transition-colors">Services</a>
             <a href="#team" className="text-foreground hover:text-primary transition-colors">Team</a>
             <a href="#contact" className="text-foreground hover:text-primary transition-colors">Contact</a>
+            <Link to="/admin" className="flex items-center gap-1 text-foreground hover:text-primary transition-colors">
+              <LayoutDashboard className="h-4 w-4" /> Admin
+            </Link>
           </nav>
 
           {/* Contact Buttons - Desktop */}
@@ -99,6 +103,13 @@ export function Header() {
               >
                 Contact
               </a>
+              <Link
+                to="/admin"
+                className="flex items-center gap-2 text-foreground hover:text-primary transition-colors py-2"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <LayoutDashboard className="h-4 w-4" /> Admin Console
+              </Link>
               <div className="flex flex-col space-y-2 pt-4">
                 <Button variant="outline" onClick={handleCall} className="flex items-center justify-center gap-2">
                   <Phone className="h-4 w-4" />

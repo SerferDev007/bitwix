@@ -5,7 +5,8 @@ dotenv.config();
 
 // A shared connection pool. Reusing connections is important so the API
 // doesn't open a brand new socket to MySQL on every single request.
-export const pool = mysql.createPool({
+// A test harness may inject an in-memory pool via globalThis.__FAKE_POOL__.
+export const pool = globalThis.__FAKE_POOL__ || mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   port: Number(process.env.DB_PORT) || 3306,
   user: process.env.DB_USER || 'root',

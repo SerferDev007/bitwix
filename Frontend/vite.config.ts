@@ -29,4 +29,14 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src/app'),
     },
   },
+  server: {
+    // Proxy API calls to the Express backend during development so the frontend
+    // can use origin-relative URLs (/api/...) with no CORS and no hardcoded host.
+    proxy: {
+      '/api': {
+        target: process.env.VITE_BACKEND_ORIGIN || 'http://localhost:5000',
+        changeOrigin: true,
+      },
+    },
+  },
 })

@@ -1,10 +1,61 @@
 
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { Phone, Mail, User } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { contentApi } from "../lib/api";
+
+interface Member {
+  name: string;
+  role: string;
+  description: string;
+  image: string;
+  skills: string[];
+  contact: { phone: string; email: string };
+}
+
+// Rendered immediately and used as a fallback if the backend is unavailable.
+const fallbackTeam: Member[] = [
+  {
+    name: "Sunil Hatkadke",
+    role: "Project Manager",
+    description: "Experienced project manager with expertise in delivering complex technology projects on time and within budget. Specializes in client communication and project coordination.",
+    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
+    skills: ["Project Management", "Client Relations", "Agile Methodology", "Team Leadership"],
+    contact: { phone: "+91-8261861224", email: "support@bitwix.co.in" }
+  },
+  {
+    name: "Surekha Misal",
+    role: "HR Executive",
+    description: "Dedicated HR professional focused on building strong teams and maintaining excellent workplace culture. Handles recruitment, employee relations, and organizational development.",
+    image: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face",
+    skills: ["Human Resources", "Recruitment", "Employee Relations", "Training & Development"],
+    contact: { phone: "+91-8261861224", email: "support@bitwix.co.in" }
+  }
+];
 
 export function Team() {
+  const [teamMembers, setTeamMembers] = useState<Member[]>(fallbackTeam);
+
+  // Load live team members from the backend; keep static content on any failure.
+  useEffect(() => {
+    contentApi.team()
+      .then((res) => {
+        if (res.success && res.data && res.data.length) {
+          setTeamMembers(res.data.map((m) => ({
+            name: m.name,
+            role: m.role,
+            description: m.description || "",
+            image: m.image_url || "",
+            skills: m.skills || [],
+            contact: { phone: m.phone || "+91-8261861224", email: m.email || "support@bitwix.co.in" },
+          })));
+        }
+      })
+      .catch(() => { /* keep fallback */ });
+  }, []);
+
   const handleCall = () => {
     window.location.href = "tel:+918261861224";
   };
@@ -16,31 +67,6 @@ export function Team() {
   const handleEmailProject = (memberName: string) => {
     window.location.href = `mailto:support@bitwix.co.in?subject=Project Discussion with ${memberName}&body=Hello ${memberName},%0D%0A%0D%0AI would like to discuss a project with you. Please get back to me at your earliest convenience.%0D%0A%0D%0AThank you.`;
   };
-
-  const teamMembers = [
-    {
-      name: "Sunil Hatkadke",
-      role: "Project Manager",
-      description: "Experienced project manager with expertise in delivering complex technology projects on time and within budget. Specializes in client communication and project coordination.",
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
-      skills: ["Project Management", "Client Relations", "Agile Methodology", "Team Leadership"],
-      contact: {
-        phone: "+91-8261861224",
-        email: "support@bitwix.co.in"
-      }
-    },
-    {
-      name: "Surekha Misal",
-      role: "HR Executive",
-      description: "Dedicated HR professional focused on building strong teams and maintaining excellent workplace culture. Handles recruitment, employee relations, and organizational development.",
-      image: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face",
-      skills: ["Human Resources", "Recruitment", "Employee Relations", "Training & Development"],
-      contact: {
-        phone: "+91-8261861224",
-        email: "support@bitwix.co.in"
-      }
-    }
-  ];
 
   return (
     <section id="team" className="py-20 bg-secondary/20">

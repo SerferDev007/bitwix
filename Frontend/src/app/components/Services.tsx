@@ -1,9 +1,60 @@
 
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Monitor, Smartphone, Code, Palette, Database, Shield, ArrowRight, Phone, Mail } from "lucide-react";
+import { contentApi } from "../lib/api";
+
+// Map icon names stored in the DB to lucide components.
+const iconMap: Record<string, typeof Monitor> = { Monitor, Smartphone, Code, Palette, Database, Shield };
+const colorPalette = ["bg-blue-500", "bg-green-500", "bg-purple-500", "bg-orange-500"];
+
+interface ServiceCard {
+  icon: typeof Monitor;
+  title: string;
+  description: string;
+  features: string[];
+  color: string;
+}
+
+// Shown immediately and used as a fallback if the backend is unavailable.
+const fallbackServices: ServiceCard[] = [
+  {
+    icon: Monitor,
+    title: "Website Development",
+    description: "Create stunning, responsive websites that captivate your audience and drive business growth.",
+    features: ["Responsive Design", "E-commerce Solutions", "Content Management Systems", "SEO Optimization", "Performance Optimization", "Custom Web Applications"],
+    color: "bg-blue-500"
+  },
+  {
+    icon: Smartphone,
+    title: "Android App Development",
+    description: "Build powerful Android applications that deliver exceptional user experiences and functionality.",
+    features: ["Native Android Apps", "Cross-Platform Solutions", "UI/UX Design", "API Integration", "App Store Deployment", "Maintenance & Support"],
+    color: "bg-green-500"
+  }
+];
 
 export function Services() {
+  const [services, setServices] = useState<ServiceCard[]>(fallbackServices);
+
+  // Load live services from the backend; keep the static content on any failure.
+  useEffect(() => {
+    contentApi.services()
+      .then((res) => {
+        if (res.success && res.data && res.data.length) {
+          setServices(res.data.map((s, i) => ({
+            icon: iconMap[s.icon || ""] || Monitor,
+            title: s.title,
+            description: s.description,
+            features: s.features || [],
+            color: colorPalette[i % colorPalette.length],
+          })));
+        }
+      })
+      .catch(() => { /* keep fallback */ });
+  }, []);
+
   const handleCall = () => {
     window.location.href = "tel:+918261861224";
   };
@@ -11,37 +62,6 @@ export function Services() {
   const handleEmail = () => {
     window.location.href = "mailto:support@bitwix.co.in?subject=Service Inquiry&body=Hello Bitwix Team,%0D%0A%0D%0AI am interested in your services. Please provide more information about:%0D%0A%0D%0A☐ Website Development%0D%0A☐ Android App Development%0D%0A%0D%0AThank you.";
   };
-
-  const services = [
-    {
-      icon: Monitor,
-      title: "Website Development",
-      description: "Create stunning, responsive websites that captivate your audience and drive business growth.",
-      features: [
-        "Responsive Design",
-        "E-commerce Solutions",
-        "Content Management Systems",
-        "SEO Optimization",
-        "Performance Optimization",
-        "Custom Web Applications"
-      ],
-      color: "bg-blue-500"
-    },
-    {
-      icon: Smartphone,
-      title: "Android App Development",
-      description: "Build powerful Android applications that deliver exceptional user experiences and functionality.",
-      features: [
-        "Native Android Apps",
-        "Cross-Platform Solutions",
-        "UI/UX Design",
-        "API Integration",
-        "App Store Deployment",
-        "Maintenance &amp; Support"
-      ],
-      color: "bg-green-500"
-    }
-  ];
 
   const additionalServices = [
     { icon: Code, title: "Custom Development", description: "Tailored solutions for unique business requirements" },
