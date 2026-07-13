@@ -9,6 +9,8 @@ import clientRoutes from './clients.js';
 import teamRoutes from './team.js';
 import authRoutes from './auth.js';
 import hrRoutes from './hr.js';
+import crmRoutes from './crm.js';
+import portalRoutes from './portal.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
@@ -60,5 +62,10 @@ router.use('/clients', requireAuth, clientRoutes);
 
 // Employee Management System (RBAC / HR) — auth enforced per-route inside.
 router.use('/hr', hrRoutes);
+
+// CRM — dual-plane. Internal staff and external client portal are SEPARATE
+// route trees with separate middleware (structural isolation, Section 9.1).
+router.use('/crm', crmRoutes);       // internal staff plane
+router.use('/portal', portalRoutes); // external client portal plane
 
 export default router;
