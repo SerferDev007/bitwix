@@ -37,11 +37,14 @@ Set these shell variables (bash) and reuse them throughout:
 export AWS_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
 export REGION=ap-south-1
 export APP=bitwix
-export DB_PASSWORD='Karizma0626'
+export DB_PASSWORD='Karizma0626'   # RDS forbids / @ " and space
 export ADMIN_PASSWORD='Karizma0626'
 export AUTH_SECRET=$(openssl rand -hex 32)
 echo "Account=$AWS_ACCOUNT  Auth secret=$AUTH_SECRET"
 ```
+
+> ⚠️ Never commit real passwords into this file — set them only in your shell / App Runner env.
+> RDS master passwords may **not** contain `/`, `@`, `"`, or spaces.
 
 ---
 
