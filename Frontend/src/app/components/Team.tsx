@@ -21,7 +21,7 @@ const fallbackTeam: Member[] = [
     name: "Amruta Shejul",
     role: "Managing Director & Co-Founder",
     description: "Co-founder and Managing Director of Bitwix Technologies, driving the company vision, strategy, and growth. Leads operations and client partnerships to deliver reliable digital solutions.",
-    image: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face",
+    image: "",
     skills: ["Business Strategy", "Leadership", "Operations", "Client Partnerships"],
     contact: { phone: "+91-8261861224", email: "support@bitwix.co.in" }
   },
@@ -29,7 +29,7 @@ const fallbackTeam: Member[] = [
     name: "Sunil Hatkadke",
     role: "Developer",
     description: "Developer at Bitwix Technologies, building responsive websites and Android applications end to end. Focused on clean, maintainable code and dependable delivery.",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
+    image: "",
     skills: ["Full-Stack Development", "React", "Node.js", "Android"],
     contact: { phone: "+91-8261861224", email: "support@bitwix.co.in" }
   }
@@ -86,14 +86,24 @@ export function Team() {
             <Card key={index} className="overflow-hidden hover:shadow-xl transition-shadow">
               <CardContent className="p-0">
                 <div className="grid grid-cols-1 md:grid-cols-2">
-                  {/* Image Section */}
-                  <div className="relative h-64 md:h-full">
-                    <ImageWithFallback
-                      src={member.image}
-                      alt={member.name}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                  {/* Image Section — photo if set, otherwise an initials avatar */}
+                  <div className="relative h-64 md:h-full min-h-[16rem]">
+                    {member.image ? (
+                      <>
+                        <ImageWithFallback
+                          src={member.image}
+                          alt={member.name}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                      </>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
+                        <span className="text-5xl md:text-6xl font-bold text-primary/70">
+                          {member.name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("")}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Content Section */}

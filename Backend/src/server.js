@@ -44,6 +44,14 @@ app.use((req, res) => {
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   console.error('[error]', err.message);
+  // Multer upload errors (e.g. file too large) and other user-facing errors.
+  if (err.name === 'MulterError') {
+    const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Image is too large (max 5 MB).' : `Upload error: ${err.message}`;
+    return res.status(400).json({ success: false, message: msg });
+  }
+  if (err.userFacing) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
   const status = err.message?.includes('CORS') ? 403 : 500;
   res.status(status).json({
     success: false,

@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { RosterTab } from "./tabs/RosterTab";
 import { AllocationTab } from "./tabs/AllocationTab";
 import { RetentionTab } from "./tabs/RetentionTab";
+import { WebsiteTeamTab } from "./tabs/WebsiteTeamTab";
 
 export function EmployeesPage() {
   return (
@@ -22,6 +23,7 @@ export function EmployeesPage() {
           <TabsTrigger value="roster">Roster</TabsTrigger>
           <TabsTrigger value="allocation">Task Allocation</TabsTrigger>
           <TabsTrigger value="retention">Retention</TabsTrigger>
+          <TabsTrigger value="website-team">Website Team</TabsTrigger>
         </TabsList>
 
         <TabsContent value="roster">
@@ -32,6 +34,9 @@ export function EmployeesPage() {
         </TabsContent>
         <TabsContent value="retention">
           <RetentionTab />
+        </TabsContent>
+        <TabsContent value="website-team">
+          <WebsiteTeamTab />
         </TabsContent>
       </Tabs>
     </div>

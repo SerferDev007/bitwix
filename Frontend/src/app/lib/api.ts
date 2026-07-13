@@ -99,6 +99,57 @@ export const contentApi = {
 };
 
 // ---------------------------------------------------------------------------
+// Team management (admin) — CRUD + photo upload to S3
+// ---------------------------------------------------------------------------
+
+export interface AdminTeamMember {
+  id: number;
+  name: string;
+  role: string;
+  description: string | null;
+  image_url: string | null;
+  skills: string[];
+  phone: string | null;
+  email: string | null;
+  sort_order: number;
+  is_active: number | boolean;
+}
+
+export const teamAdminApi = {
+  listAll: () =>
+    request<AdminTeamMember[]>("/team/all") as Promise<ApiResult<AdminTeamMember[]> & { uploadsEnabled?: boolean }>,
+  create: (body: Partial<AdminTeamMember> & { skills?: string[] | string }) =>
+    request("/team", { method: "POST", body: JSON.stringify(body) }),
+  update: (id: number, body: Record<string, unknown>) =>
+    request(`/team/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  remove: (id: number) => request(`/team/${id}`, { method: "DELETE" }),
+  deletePhoto: (id: number) => request(`/team/${id}/photo`, { method: "DELETE" }),
+
+  // Multipart upload — must NOT set Content-Type (browser sets the boundary).
+  async uploadPhoto(id: number, file: File): Promise<ApiResult<{ image_url: string }>> {
+    const token = authToken.get();
+    const form = new FormData();
+    form.append("photo", file);
+    const res = await fetch(`${API_BASE}/team/${id}/photo`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    if (res.status === 401) {
+      authToken.clear();
+      if (typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
+        window.location.assign("/admin/login");
+      }
+    }
+    try {
+      return await res.json();
+    } catch {
+      return { success: false, message: "Unexpected server response." };
+    }
+  },
+};
+
+// ---------------------------------------------------------------------------
 // App settings
 // ---------------------------------------------------------------------------
 

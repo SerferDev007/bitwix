@@ -306,3 +306,47 @@ aws apprunner start-deployment --service-arn <APP_RUNNER_ARN> --region $REGION
 RDS db.t3.micro (~$15) + App Runner 0.25vCPU (~$5–15 idle-to-light) + S3/CloudFront (cents–$1) +
 Route 53 hosted zone ($0.50). Ballpark **$25–40/month**. Stop/downsize RDS and App Runner when idle
 to reduce it.
+
+## 12. Team photo uploads (S3)
+
+The admin console (Employee Management → **Website Team**) can upload team photos
+to S3; the DB stores the resulting URL and the website shows it (initials avatar
+when none). Enable it once:
+
+```bash
+export ACC=214745598689 REGION=ap-south-1
+export MEDIA_BUCKET=bitwix-media-$ACC
+
+# 1. Bucket for public-readable images
+aws s3api create-bucket --bucket $MEDIA_BUCKET --region $REGION \
+  --create-bucket-configuration LocationConstraint=$REGION
+aws s3api put-public-access-block --bucket $MEDIA_BUCKET \
+  --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=false,RestrictPublicBuckets=false
+aws s3api put-bucket-policy --bucket $MEDIA_BUCKET --policy "{
+  \"Version\":\"2012-10-17\",
+  \"Statement\":[{\"Sid\":\"PublicReadTeam\",\"Effect\":\"Allow\",\"Principal\":\"*\",
+    \"Action\":\"s3:GetObject\",\"Resource\":\"arn:aws:s3:::$MEDIA_BUCKET/team/*\"}]
+}"
+
+# 2. App Runner INSTANCE role (the running container's AWS identity) with write access
+cat > /tmp/trust.json <<JSON
+{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"tasks.apprunner.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+JSON
+aws iam create-role --role-name bitwix-apprunner-instance \
+  --assume-role-policy-document file:///tmp/trust.json
+aws iam put-role-policy --role-name bitwix-apprunner-instance --policy-name media-write \
+  --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",
+    \"Action\":[\"s3:PutObject\",\"s3:DeleteObject\"],\"Resource\":\"arn:aws:s3:::$MEDIA_BUCKET/*\"}]}"
+```
+
+Then, in the **App Runner** service:
+- **Security → Instance role** → select `bitwix-apprunner-instance`.
+- **Environment variables** → add `MEDIA_BUCKET=bitwix-media-214745598689` and `MEDIA_REGION=ap-south-1`.
+- Deploy.
+
+Uploads are optional: with `MEDIA_BUCKET` unset the app still runs and members show
+initials. To serve images through your domain instead of the S3 URL, set
+`MEDIA_PUBLIC_BASE_URL` to a CloudFront/CDN domain that fronts the media bucket.
+
+> Note: the frontend GitHub Action syncs `dist/` with `--delete`, so **do not** store
+> uploads in the website bucket — use this separate media bucket.

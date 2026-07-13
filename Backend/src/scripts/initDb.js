@@ -53,8 +53,7 @@ const team = [
     role: 'Managing Director & Co-Founder',
     description:
       'Co-founder and Managing Director of Bitwix Technologies, driving the company vision, strategy, and growth. Leads operations and client partnerships to deliver reliable digital solutions.',
-    image_url:
-      'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face',
+    image_url: null, // upload a photo from the admin console; shows initials until then
     skills: ['Business Strategy', 'Leadership', 'Operations', 'Client Partnerships'],
     phone: '+91-8261861224',
     email: 'support@bitwix.co.in',
@@ -65,8 +64,7 @@ const team = [
     role: 'Developer',
     description:
       'Developer at Bitwix Technologies, building responsive websites and Android applications end to end. Focused on clean, maintainable code and dependable delivery.',
-    image_url:
-      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
+    image_url: null,
     skills: ['Full-Stack Development', 'React', 'Node.js', 'Android'],
     phone: '+91-8261861224',
     email: 'support@bitwix.co.in',

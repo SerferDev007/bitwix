@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { createContactMessage, listContactMessages } from '../controllers/contactController.js';
-import { listServices, listTeamMembers } from '../controllers/contentController.js';
+import { listServices } from '../controllers/contentController.js';
 import projectRoutes from './projects.js';
 import employeeRoutes from './employees.js';
 import financialRoutes from './financial.js';
 import clientRoutes from './clients.js';
+import teamRoutes from './team.js';
 import authRoutes from './auth.js';
 import { requireAuth } from '../middleware/auth.js';
 
@@ -37,7 +38,9 @@ router.get('/settings', (req, res) => {
 // --- Public site endpoints (no auth) ---
 router.post('/contact', contactLimiter, createContactMessage); // visitors submit
 router.get('/services', listServices);
-router.get('/team', listTeamMembers);
+
+// Team: public GET, protected CRUD + photo upload (auth enforced inside).
+router.use('/team', teamRoutes);
 
 // --- Protected admin endpoints (require a valid token) ---
 router.get('/contact', requireAuth, listContactMessages); // admin reads messages
