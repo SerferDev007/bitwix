@@ -1,0 +1,10 @@
+node_modules
+npm-debug.log
+.env
+.env.*
+*.log
+*.bat
+README.md
+schema.sql
+.git
+.gitignore

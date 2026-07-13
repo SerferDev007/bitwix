@@ -52,19 +52,48 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Retry the DB connection a few times before giving up. Managed databases
+// (RDS) and freshly-started local servers can be briefly unavailable at boot.
+async function connectWithRetry(attempts = Number(process.env.DB_CONNECT_RETRIES) || 10, delayMs = 3000) {
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      await assertDbConnection();
+      console.log('✅ Connected to MySQL.');
+      return;
+    } catch (err) {
+      const code = err.code || err.message || 'unknown error';
+      if (i === attempts) throw err;
+      console.warn(`⏳ MySQL not ready (${code}); retry ${i}/${attempts - 1} in ${delayMs / 1000}s...`);
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+}
+
 async function start() {
+  // On first deploy against a fresh database, set RUN_DB_INIT=true to create
+  // and seed the schema automatically (idempotent). Unset it afterwards.
+  if (process.env.RUN_DB_INIT === 'true') {
+    try {
+      const { initializeDatabase } = await import('./scripts/initDb.js');
+      console.log('RUN_DB_INIT=true — ensuring database schema...');
+      await initializeDatabase();
+    } catch (err) {
+      console.error('❌ Database initialization failed:', err.message);
+      process.exit(1);
+    }
+  }
+
   try {
-    await assertDbConnection();
-    console.log('✅ Connected to MySQL.');
+    await connectWithRetry();
   } catch (err) {
-    console.error('❌ Could not connect to MySQL:', err.message);
-    console.error('   Check your Backend/.env settings and that MySQL is running,');
-    console.error('   then run `npm run db:init` to create the database.');
+    console.error('❌ Could not connect to MySQL:', err.code || err.message);
+    console.error('   Check the DB_* settings and that the database is reachable,');
+    console.error('   then run `npm run db:init` (or set RUN_DB_INIT=true) to create it.');
     process.exit(1);
   }
 
   app.listen(PORT, () => {
-    console.log(`🚀 Bitwix backend running at http://localhost:${PORT}`);
+    console.log(`🚀 Bitwix backend running on port ${PORT}`);
     console.log(`   Allowed CORS origins: ${allowedOrigins.join(', ')}`);
   });
 }

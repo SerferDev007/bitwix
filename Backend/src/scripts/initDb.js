@@ -1,9 +1,16 @@
 // Creates the database + tables and seeds the services/team content.
-// Usage: npm run db:init
+// Usage: npm run db:init  (CLI)  — or imported and called as initializeDatabase()
+// e.g. the server runs it on boot when RUN_DB_INIT=true (first deploy on RDS).
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
+import { pathToFileURL } from 'url';
 
 dotenv.config();
+
+// Optional TLS for managed databases (RDS). Mirrors src/config/db.js.
+const dbSsl = process.env.DB_SSL === 'true'
+  ? { ssl: { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' } }
+  : {};
 
 const DB_NAME = process.env.DB_NAME || 'bitwix';
 
@@ -67,7 +74,7 @@ const team = [
   },
 ];
 
-async function main() {
+export async function initializeDatabase() {
   // Connect WITHOUT a database first so we can create it.
   const conn = await mysql.createConnection({
     host: process.env.DB_HOST || 'localhost',
@@ -75,6 +82,7 @@ async function main() {
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
     multipleStatements: true,
+    ...dbSsl,
   });
 
   console.log(`Creating database "${DB_NAME}" (if it does not exist)...`);
@@ -482,7 +490,10 @@ async function main() {
   console.log('\n✅ Database initialized successfully.');
 }
 
-main().catch((err) => {
-  console.error('\n❌ Database initialization failed:', err.message);
-  process.exit(1);
-});
+// Run automatically only when executed directly (npm run db:init), not on import.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  initializeDatabase().catch((err) => {
+    console.error('\n❌ Database initialization failed:', err.message);
+    process.exit(1);
+  });
+}
