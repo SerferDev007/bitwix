@@ -18,19 +18,19 @@ interface Member {
 // Rendered immediately and used as a fallback if the backend is unavailable.
 const fallbackTeam: Member[] = [
   {
-    name: "Sunil Hatkadke",
-    role: "Project Manager",
-    description: "Experienced project manager with expertise in delivering complex technology projects on time and within budget. Specializes in client communication and project coordination.",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
-    skills: ["Project Management", "Client Relations", "Agile Methodology", "Team Leadership"],
+    name: "Amruta Shejul",
+    role: "Managing Director & Co-Founder",
+    description: "Co-founder and Managing Director of Bitwix Technologies, driving the company vision, strategy, and growth. Leads operations and client partnerships to deliver reliable digital solutions.",
+    image: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face",
+    skills: ["Business Strategy", "Leadership", "Operations", "Client Partnerships"],
     contact: { phone: "+91-8261861224", email: "support@bitwix.co.in" }
   },
   {
-    name: "Surekha Misal",
-    role: "HR Executive",
-    description: "Dedicated HR professional focused on building strong teams and maintaining excellent workplace culture. Handles recruitment, employee relations, and organizational development.",
-    image: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face",
-    skills: ["Human Resources", "Recruitment", "Employee Relations", "Training & Development"],
+    name: "Sunil Hatkadke",
+    role: "Developer",
+    description: "Developer at Bitwix Technologies, building responsive websites and Android applications end to end. Focused on clean, maintainable code and dependable delivery.",
+    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
+    skills: ["Full-Stack Development", "React", "Node.js", "Android"],
     contact: { phone: "+91-8261861224", email: "support@bitwix.co.in" }
   }
 ];

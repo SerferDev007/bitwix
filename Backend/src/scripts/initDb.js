@@ -49,25 +49,25 @@ const services = [
 
 const team = [
   {
-    name: 'Sunil Hatkadke',
-    role: 'Project Manager',
+    name: 'Amruta Shejul',
+    role: 'Managing Director & Co-Founder',
     description:
-      'Experienced project manager with expertise in delivering complex technology projects on time and within budget. Specializes in client communication and project coordination.',
+      'Co-founder and Managing Director of Bitwix Technologies, driving the company vision, strategy, and growth. Leads operations and client partnerships to deliver reliable digital solutions.',
     image_url:
-      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
-    skills: ['Project Management', 'Client Relations', 'Agile Methodology', 'Team Leadership'],
+      'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face',
+    skills: ['Business Strategy', 'Leadership', 'Operations', 'Client Partnerships'],
     phone: '+91-8261861224',
     email: 'support@bitwix.co.in',
     sort_order: 1,
   },
   {
-    name: 'Surekha Misal',
-    role: 'HR Executive',
+    name: 'Sunil Hatkadke',
+    role: 'Developer',
     description:
-      'Dedicated HR professional focused on building strong teams and maintaining excellent workplace culture. Handles recruitment, employee relations, and organizational development.',
+      'Developer at Bitwix Technologies, building responsive websites and Android applications end to end. Focused on clean, maintainable code and dependable delivery.',
     image_url:
-      'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face',
-    skills: ['Human Resources', 'Recruitment', 'Employee Relations', 'Training & Development'],
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
+    skills: ['Full-Stack Development', 'React', 'Node.js', 'Android'],
     phone: '+91-8261861224',
     email: 'support@bitwix.co.in',
     sort_order: 2,
@@ -215,15 +215,15 @@ export async function initializeDatabase() {
     }
   }
 
-  const [[teamCount]] = await conn.query('SELECT COUNT(*) AS c FROM team_members;');
-  if (teamCount.c === 0) {
-    console.log('Seeding team members...');
-    for (const m of team) {
-      await conn.query(
-        'INSERT INTO team_members (name, role, description, image_url, skills, phone, email, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [m.name, m.role, m.description, m.image_url, JSON.stringify(m.skills), m.phone, m.email, m.sort_order]
-      );
-    }
+  // Team is refreshed from the seed on every init, so content edits go live by
+  // redeploying the backend once with RUN_DB_INIT=true.
+  console.log('Syncing team members...');
+  await conn.query('DELETE FROM team_members;');
+  for (const m of team) {
+    await conn.query(
+      'INSERT INTO team_members (name, role, description, image_url, skills, phone, email, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [m.name, m.role, m.description, m.image_url, JSON.stringify(m.skills), m.phone, m.email, m.sort_order]
+    );
   }
 
   // --- Employee Management module tables ---
