@@ -4,6 +4,7 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 import { pathToFileURL } from 'url';
+import { ensureHrSchema } from '../hr/schema.js';
 
 dotenv.config();
 
@@ -483,6 +484,10 @@ export async function initializeDatabase() {
       ['Support desk (paper Example 5.1)', 18, 8, 3, 0.25]
     );
   }
+
+  // Employee Management System (RBAC / HR) tables, matrix seed, bootstrap admin.
+  console.log('Setting up HR / RBAC schema...');
+  await ensureHrSchema(conn);
 
   await conn.end();
   console.log('\n✅ Database initialized successfully.');

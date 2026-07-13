@@ -8,6 +8,7 @@ import financialRoutes from './financial.js';
 import clientRoutes from './clients.js';
 import teamRoutes from './team.js';
 import authRoutes from './auth.js';
+import hrRoutes from './hr.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
@@ -56,5 +57,8 @@ router.use('/financial', requireAuth, financialRoutes);
 
 // Client Management module (M/M/c queuing / CLV)
 router.use('/clients', requireAuth, clientRoutes);
+
+// Employee Management System (RBAC / HR) — auth enforced per-route inside.
+router.use('/hr', hrRoutes);
 
 export default router;

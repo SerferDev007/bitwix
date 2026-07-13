@@ -276,8 +276,8 @@ curl    https://bitwix.co.in/api/settings          # INR default
 **Frontend change:**
 ```bash
 cd Frontend && pnpm build && cd ..
-aws s3 sync Frontend/dist s3://$APP-web-bitwix --delete
-aws cloudfront create-invalidation --distribution-id <DIST_ID> --paths '/*'
+aws s3 sync Frontend/dist s3://website-bitwix.co.in --delete
+aws cloudfront create-invalidation --distribution-id ERN797ECCH3LY --paths '/*'
 ```
 
 **Backend change:**
