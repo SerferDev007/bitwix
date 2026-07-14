@@ -63,7 +63,7 @@ const team = [
     sort_order: 1,
   },
   {
-    name: 'Sarita Palkudtewar',
+    name: 'Sarita Palakudetwar',
     role: 'CEO & Co-Founder',
     description:
       'Chief Executive Officer and Co-Founder of Bitwix Technologies, setting the strategic direction and driving the company growth, partnerships, and client success.',
