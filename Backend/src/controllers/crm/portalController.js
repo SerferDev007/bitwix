@@ -106,6 +106,18 @@ export async function listMyTickets(req, res, next) {
   } catch (err) { next(err); }
 }
 
+// --- Invoices (tenant-isolated; account from the session, never a parameter) ---
+export async function listInvoices(req, res, next) {
+  try {
+    const [rows] = await pool.query(
+      `SELECT id, number, amount, currency, status, issued_at, due_date, paid_at
+         FROM invoices WHERE account_id = ? ORDER BY issued_at DESC`,
+      [req.actor.accountId] // the tenant boundary
+    );
+    res.json({ success: true, count: rows.length, data: rows });
+  } catch (err) { next(err); }
+}
+
 // --- Consent (self-service, append-only) ---
 export async function getConsent(req, res, next) {
   try {

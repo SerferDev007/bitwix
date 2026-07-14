@@ -6,7 +6,7 @@ import rateLimit from 'express-rate-limit';
 import { portalAuth } from '../middleware/crmAuth.js';
 import {
   portalLogin, portalActivate, portalMe, portalLogout,
-  createTicket, listMyTickets, getConsent, setConsent, requestPortalUser,
+  createTicket, listMyTickets, listInvoices, getConsent, setConsent, requestPortalUser,
 } from '../controllers/crm/portalController.js';
 
 const router = Router();
@@ -19,6 +19,8 @@ router.post('/auth/logout', portalAuth('account.read.self'), portalLogout);
 
 router.post('/tickets', portalAuth('ticket.create'), createTicket);
 router.get('/tickets', portalAuth('ticket.read.self'), listMyTickets);
+
+router.get('/invoices', portalAuth('invoice.read'), listInvoices);
 
 router.get('/consent', portalAuth('consent.manage.self'), getConsent);
 router.put('/consent', portalAuth('consent.manage.self'), setConsent);

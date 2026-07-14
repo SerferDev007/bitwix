@@ -17,6 +17,15 @@ import { AccountDetailPage } from "./crm/AccountDetailPage";
 import { PipelinePage } from "./crm/PipelinePage";
 import { ForecastPage } from "./crm/ForecastPage";
 import { TicketsPage } from "./crm/TicketsPage";
+import { PortalLoginPage } from "./portal/PortalLoginPage";
+import { PortalActivatePage } from "./portal/PortalActivatePage";
+import { PortalRequireAuth } from "./portal/PortalRequireAuth";
+import { PortalLayout } from "./portal/PortalLayout";
+import { PortalOverviewPage } from "./portal/PortalOverviewPage";
+import { PortalTicketsPage } from "./portal/PortalTicketsPage";
+import { PortalInvoicesPage } from "./portal/PortalInvoicesPage";
+import { PortalConsentPage } from "./portal/PortalConsentPage";
+import { PortalUsersPage } from "./portal/PortalUsersPage";
 
 export default function App() {
   return (
@@ -43,6 +52,18 @@ export default function App() {
           <Route path="pipeline" element={<PipelinePage />} />
           <Route path="forecast" element={<ForecastPage />} />
           <Route path="tickets" element={<TicketsPage />} />
+        </Route>
+
+        {/* Client portal — external plane. Own login/session; role-differentiated. */}
+        <Route path="/portal/login" element={<PortalLoginPage />} />
+        <Route path="/portal/activate" element={<PortalActivatePage />} />
+        <Route path="/portal" element={<PortalRequireAuth><PortalLayout /></PortalRequireAuth>}>
+          <Route index element={<Navigate to="overview" replace />} />
+          <Route path="overview" element={<PortalOverviewPage />} />
+          <Route path="tickets" element={<PortalTicketsPage />} />
+          <Route path="invoices" element={<PortalInvoicesPage />} />
+          <Route path="consent" element={<PortalConsentPage />} />
+          <Route path="users" element={<PortalUsersPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

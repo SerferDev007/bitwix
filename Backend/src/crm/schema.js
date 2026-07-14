@@ -150,6 +150,24 @@ export async function ensureCrmSchema(conn) {
       FOREIGN KEY (contact_id) REFERENCES contacts(id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`);
 
+  // --- Invoices (portal: Client Finance / Client Admin, tenant-isolated) ---
+  await conn.query(`
+    CREATE TABLE IF NOT EXISTS invoices (
+      id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      account_id  BIGINT UNSIGNED NOT NULL,               -- tenant boundary
+      number      VARCHAR(40) NOT NULL,
+      amount      DECIMAL(14,2) NOT NULL,
+      currency    VARCHAR(8) NOT NULL DEFAULT 'INR',
+      status      ENUM('DRAFT','SENT','PAID','OVERDUE','VOID') NOT NULL DEFAULT 'SENT',
+      issued_at   DATE NOT NULL,
+      due_date    DATE NULL,
+      paid_at     DATE NULL,
+      PRIMARY KEY (id),
+      UNIQUE KEY uq_invoice_number (number),
+      INDEX idx_invoice_acc (account_id, status),
+      FOREIGN KEY (account_id) REFERENCES accounts(id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`);
+
   await conn.query(`
     CREATE TABLE IF NOT EXISTS crm_audit_log (
       id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
