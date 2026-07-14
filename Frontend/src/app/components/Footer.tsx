@@ -103,7 +103,7 @@ export function Footer() {
             <div className="mt-6">
               <h4 className="font-medium mb-2">Key Team Members</h4>
               <div className="text-sm text-primary-foreground/80 space-y-1">
-                <p>Sunil Hatkadke - Project Manager</p>
+                <p>Sunil Hatkadke - Developer</p>
                 <p>Surekha Misal - HR Executive</p>
               </div>
             </div>
