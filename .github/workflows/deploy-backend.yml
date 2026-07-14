@@ -1,0 +1,91 @@
+name: Deploy backend to App Runner
+
+# Builds the backend Docker image, pushes it to ECR, and forces App Runner to
+# pull the new image. Runs on pushes to main that touch the backend, or manually.
+#
+# WHY start-deployment: the App Runner service has AutoDeployments OFF, so pushing
+# a new :latest to ECR does NOT redeploy on its own, and `update-service` with an
+# unchanged config is a no-op. `start-deployment` is what actually re-pulls :latest.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Backend/**"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false # never cancel a deploy mid-flight
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPO: bitwix-backend
+  APP_RUNNER_SERVICE: bitwix-backend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        working-directory: Backend
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          set -euo pipefail
+          IMAGE="$REGISTRY/$ECR_REPO"
+          docker build --platform linux/amd64 \
+            -t "$IMAGE:latest" -t "$IMAGE:${{ github.sha }}" .
+          docker push "$IMAGE:latest"
+          docker push "$IMAGE:${{ github.sha }}"
+          echo "Pushed $IMAGE:latest (and :${{ github.sha }})"
+
+      - name: Deploy to App Runner and wait
+        run: |
+          set -euo pipefail
+          ARN=$(aws apprunner list-services --region "$AWS_REGION" \
+            --query "ServiceSummaryList[?ServiceName=='$APP_RUNNER_SERVICE'].ServiceArn" --output text)
+          if [ -z "$ARN" ] || [ "$ARN" = "None" ]; then
+            echo "::error::App Runner service '$APP_RUNNER_SERVICE' not found in $AWS_REGION"; exit 1
+          fi
+          echo "Service: $ARN"
+          OP=$(aws apprunner start-deployment --region "$AWS_REGION" \
+            --service-arn "$ARN" --query OperationId --output text)
+          echo "Deployment operation: $OP"
+          for i in $(seq 1 40); do
+            ST=$(aws apprunner list-operations --region "$AWS_REGION" --service-arn "$ARN" \
+              --query "OperationSummaryList[?Id=='$OP'].Status" --output text)
+            echo "[$i] operation status: $ST"
+            case "$ST" in
+              SUCCEEDED) echo "Backend deployed."; exit 0 ;;
+              FAILED|ROLLBACK_IN_PROGRESS|ROLLBACK_SUCCEEDED|ROLLBACK_FAILED)
+                echo "::error::Deployment $ST — check App Runner application logs"; exit 1 ;;
+            esac
+            sleep 15
+          done
+          echo "::error::Timed out waiting for deployment"; exit 1
+
+      - name: Invalidate CloudFront /api/*
+        if: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID != '' }}
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/api/*"
+
+      - name: Smoke test
+        run: |
+          echo "health:"; curl -s https://www.bitwix.co.in/api/health || true; echo
