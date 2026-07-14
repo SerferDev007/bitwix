@@ -78,6 +78,16 @@ async function connectWithRetry(attempts = Number(process.env.DB_CONNECT_RETRIES
 }
 
 async function start() {
+  // Bind the port FIRST so the platform health check (a TCP probe on PORT) passes
+  // even while the database is connecting/initializing. A slow or failing DB step
+  // then degrades individual endpoints (visible in logs) instead of crash-looping
+  // the whole service — App Runner treats an early process exit as a failed deploy
+  // and rolls back, so never exit during startup for a recoverable DB issue.
+  app.listen(PORT, () => {
+    console.log(`🚀 Bitwix backend running on port ${PORT}`);
+    console.log(`   Allowed CORS origins: ${allowedOrigins.join(', ')}`);
+  });
+
   // On first deploy against a fresh database, set RUN_DB_INIT=true to create
   // and seed the schema automatically (idempotent). Unset it afterwards.
   if (process.env.RUN_DB_INIT === 'true') {
@@ -85,9 +95,11 @@ async function start() {
       const { initializeDatabase } = await import('./scripts/initDb.js');
       console.log('RUN_DB_INIT=true — ensuring database schema...');
       await initializeDatabase();
+      console.log('✅ Database schema ensured.');
     } catch (err) {
-      console.error('❌ Database initialization failed:', err.message);
-      process.exit(1);
+      // Log the FULL stack (not just message) and keep serving so the failure is
+      // diagnosable in the application logs and the service stays healthy.
+      console.error('❌ Database initialization failed:', err.stack || err.message);
     }
   }
 
@@ -95,15 +107,8 @@ async function start() {
     await connectWithRetry();
   } catch (err) {
     console.error('❌ Could not connect to MySQL:', err.code || err.message);
-    console.error('   Check the DB_* settings and that the database is reachable,');
-    console.error('   then run `npm run db:init` (or set RUN_DB_INIT=true) to create it.');
-    process.exit(1);
+    console.error('   Check the DB_* settings and that the database is reachable.');
   }
-
-  app.listen(PORT, () => {
-    console.log(`🚀 Bitwix backend running on port ${PORT}`);
-    console.log(`   Allowed CORS origins: ${allowedOrigins.join(', ')}`);
-  });
 }
 
 start();

@@ -17,7 +17,7 @@ export async function ensureHrSchema(conn) {
     CREATE TABLE IF NOT EXISTS roles (
       id   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
       name VARCHAR(30) NOT NULL UNIQUE,
-      rank SMALLINT NOT NULL,
+      \`rank\` SMALLINT NOT NULL,   -- backticked: RANK is a reserved word in MySQL 8
       PRIMARY KEY (id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`);
 
@@ -160,7 +160,7 @@ async function addColumnIfMissing(conn, table, column, definition) {
 
 async function seedRolesAndPermissions(conn) {
   for (const name of ROLES) {
-    await conn.query('INSERT IGNORE INTO roles (name, rank) VALUES (?, ?)', [name, ROLE_RANK[name]]);
+    await conn.query('INSERT IGNORE INTO roles (name, `rank`) VALUES (?, ?)', [name, ROLE_RANK[name]]);
   }
   for (const code of PERMISSIONS) {
     await conn.query('INSERT IGNORE INTO permissions (code) VALUES (?)', [code]);
