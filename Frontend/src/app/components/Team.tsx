@@ -18,19 +18,19 @@ interface Member {
 // Rendered immediately and used as a fallback if the backend is unavailable.
 const fallbackTeam: Member[] = [
   {
-    name: "Sarita Palkudtewar",
-    role: "CEO & Co-Founder",
-    description: "Chief Executive Officer and Co-Founder of Bitwix Technologies, setting the strategic direction and driving the company growth, partnerships, and client success.",
-    image: "",
-    skills: ["Leadership", "Strategy", "Business Development", "Client Success"],
-    contact: { phone: "+91-8261861224", email: "support@bitwix.co.in" }
-  },
-  {
     name: "Amruta Shejul",
     role: "Managing Director & Founder",
     description: "Co-founder and Managing Director of Bitwix Technologies, driving the company vision, strategy, and growth. Leads operations and client partnerships to deliver reliable digital solutions.",
     image: "",
     skills: ["Business Strategy", "Leadership", "Operations", "Client Partnerships"],
+    contact: { phone: "+91-8261861224", email: "support@bitwix.co.in" }
+  },
+  {
+    name: "Sarita Palkudtewar",
+    role: "CEO & Co-Founder",
+    description: "Chief Executive Officer and Co-Founder of Bitwix Technologies, setting the strategic direction and driving the company growth, partnerships, and client success.",
+    image: "",
+    skills: ["Leadership", "Strategy", "Business Development", "Client Success"],
     contact: { phone: "+91-8261861224", email: "support@bitwix.co.in" }
   }
 ];

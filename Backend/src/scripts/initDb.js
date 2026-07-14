@@ -52,23 +52,23 @@ const services = [
 
 const team = [
   {
-    name: 'Sarita Palkudtewar',
-    role: 'CEO & Co-Founder',
+    name: 'Amruta Shejul',
+    role: 'Managing Director & Founder',
     description:
-      'Chief Executive Officer and Co-Founder of Bitwix Technologies, setting the strategic direction and driving the company growth, partnerships, and client success.',
+      'Co-founder and Managing Director of Bitwix Technologies, driving the company vision, strategy, and growth. Leads operations and client partnerships to deliver reliable digital solutions.',
     image_url: null, // upload a photo from the admin console; shows initials until then
-    skills: ['Leadership', 'Strategy', 'Business Development', 'Client Success'],
+    skills: ['Business Strategy', 'Leadership', 'Operations', 'Client Partnerships'],
     phone: '+91-8261861224',
     email: 'support@bitwix.co.in',
     sort_order: 1,
   },
   {
-    name: 'Amruta Shejul',
-    role: 'Managing Director & Founder',
+    name: 'Sarita Palkudtewar',
+    role: 'CEO & Co-Founder',
     description:
-      'Co-founder and Managing Director of Bitwix Technologies, driving the company vision, strategy, and growth. Leads operations and client partnerships to deliver reliable digital solutions.',
+      'Chief Executive Officer and Co-Founder of Bitwix Technologies, setting the strategic direction and driving the company growth, partnerships, and client success.',
     image_url: null,
-    skills: ['Business Strategy', 'Leadership', 'Operations', 'Client Partnerships'],
+    skills: ['Leadership', 'Strategy', 'Business Development', 'Client Success'],
     phone: '+91-8261861224',
     email: 'support@bitwix.co.in',
     sort_order: 2,
