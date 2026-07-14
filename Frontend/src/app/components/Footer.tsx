@@ -1,6 +1,15 @@
 
+import { Link } from "react-router";
 import { Button } from "./ui/button";
-import { Phone, Mail, Globe, ArrowUp } from "lucide-react";
+import { Phone, Mail, Globe, ArrowUp, IdCard, Building2, Landmark, Users } from "lucide-react";
+
+// Links from the public site into the core systems.
+const PORTALS = [
+  { to: "/hr", label: "Employee Management", icon: IdCard },
+  { to: "/crm", label: "CRM", icon: Building2 },
+  { to: "/admin", label: "Financial Management", icon: Landmark },
+  { to: "/portal", label: "Client Portal", icon: Users },
+];
 
 export function Footer() {
   const handleCall = () => {
@@ -42,7 +51,7 @@ export function Footer() {
                 <Phone className="h-4 w-4" />
                 Call Now
               </Button>
-              <Button variant="outline" onClick={handleEmail} className="flex items-center gap-2 text-primary-foreground border-primary-foreground hover:bg-primary-foreground hover:text-primary">
+              <Button variant="outline" onClick={handleEmail} className="flex items-center gap-2 bg-transparent text-primary-foreground border-primary-foreground/60 hover:bg-primary-foreground hover:text-primary">
                 <Mail className="h-4 w-4" />
                 Email Us
               </Button>
@@ -99,13 +108,21 @@ export function Footer() {
               </div>
             </div>
 
-            {/* Team Members */}
+            {/* Portals — direct links into the core systems */}
             <div className="mt-6">
-              <h4 className="font-medium mb-2">Key Team Members</h4>
-              <div className="text-sm text-primary-foreground/80 space-y-1">
-                <p>Sunil Hatkadke - Developer</p>
-                <p>Surekha Misal - HR Executive</p>
-              </div>
+              <h4 className="font-medium mb-2">Portals</h4>
+              <ul className="text-sm text-primary-foreground/80 space-y-1.5">
+                {PORTALS.map((p) => {
+                  const Icon = p.icon;
+                  return (
+                    <li key={p.to}>
+                      <Link to={p.to} className="flex items-center gap-2 hover:text-primary-foreground transition-colors">
+                        <Icon className="h-4 w-4" /> {p.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
           </div>
         </div>

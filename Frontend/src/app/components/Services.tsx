@@ -63,6 +63,10 @@ export function Services() {
     window.location.href = "mailto:support@bitwix.co.in?subject=Service Inquiry&body=Hello Bitwix Team,%0D%0A%0D%0AI am interested in your services. Please provide more information about:%0D%0A%0D%0A☐ Website Development%0D%0A☐ Android App Development%0D%0A%0D%0AThank you.";
   };
 
+  // Send prospects to the site's own contact form (a tracked lead) rather than
+  // only an email client.
+  const scrollToContact = () => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" });
+
   const additionalServices = [
     { icon: Code, title: "Custom Development", description: "Tailored solutions for unique business requirements" },
     { icon: Palette, title: "UI/UX Design", description: "User-centered design that enhances user experience" },
@@ -71,7 +75,7 @@ export function Services() {
   ];
 
   return (
-    <section id="services" className="py-20 bg-background">
+    <section id="services" className="scroll-mt-20 py-20 bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
@@ -112,7 +116,7 @@ export function Services() {
                       <Phone className="h-4 w-4" />
                       Discuss Project
                     </Button>
-                    <Button variant="outline" onClick={handleEmail} className="flex items-center gap-2">
+                    <Button variant="outline" onClick={scrollToContact} className="flex items-center gap-2">
                       <Mail className="h-4 w-4" />
                       Get Quote
                     </Button>
@@ -148,7 +152,7 @@ export function Services() {
           </div>
 
           <div className="text-center">
-            <Button size="lg" onClick={handleCall} className="flex items-center gap-2 mx-auto">
+            <Button size="lg" onClick={scrollToContact} className="flex items-center gap-2 mx-auto">
               Let's Discuss Your Project
               <ArrowRight className="h-5 w-5" />
             </Button>
