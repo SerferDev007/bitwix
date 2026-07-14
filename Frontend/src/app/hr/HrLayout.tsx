@@ -1,7 +1,8 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
-import { Users2, CalendarDays, ScrollText, LogOut, ArrowLeft, IdCard } from "lucide-react";
+import { Users2, CalendarDays, ScrollText, LogOut, ArrowLeft, IdCard, Banknote } from "lucide-react";
 import { hrApi } from "../lib/hrApi";
 import { useHrAuth } from "./HrRequireAuth";
+import { SuiteNav } from "../components/SuiteNav";
 
 export function HrLayout() {
   const location = useLocation();
@@ -13,6 +14,7 @@ export function HrLayout() {
   const nav = [
     { to: "/hr/employees", label: "Employees", icon: Users2, show: true },
     { to: "/hr/leave", label: "Leave", icon: CalendarDays, show: true },
+    { to: "/hr/payroll", label: "Payroll", icon: Banknote, show: can("payroll.run") || can("payroll.read.all") },
     { to: "/hr/audit", label: "Audit log", icon: ScrollText, show: can("audit.read") },
   ].filter((item) => item.show);
 
@@ -26,6 +28,7 @@ export function HrLayout() {
             <p className="text-xs text-muted-foreground">Employee management</p>
           </div>
         </div>
+        <SuiteNav />
         <nav className="flex-1 p-3 space-y-1">
           {nav.map((item) => {
             const Icon = item.icon;

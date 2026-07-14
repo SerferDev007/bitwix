@@ -9,6 +9,9 @@ import {
 import {
   listLeaveTypes, getBalance, applyLeave, listRequests, approveLeave, rejectLeave,
 } from '../controllers/hr/leaveController.js';
+import {
+  createPayrollRun, listPayrollRuns, getPayrollRun, approvePayrollRun,
+} from '../controllers/hr/payrollController.js';
 
 const router = Router();
 
@@ -38,6 +41,12 @@ router.post('/leave/requests', authorize('leave.apply'), applyLeave);
 router.get('/leave/requests', authorize('leave.apply'), listRequests); // scope decides visibility
 router.post('/leave/requests/:id/approve', authorize('leave.approve.team'), approveLeave);
 router.post('/leave/requests/:id/reject', authorize('leave.approve.team'), rejectLeave);
+
+// --- Payroll (posts PAYROLL_APPROVED to the FMS ledger on approval) ---
+router.post('/payroll/runs', authorize('payroll.run'), createPayrollRun);
+router.get('/payroll/runs', authorize('payroll.read.all'), listPayrollRuns);
+router.get('/payroll/runs/:id', authorize('payroll.read.all'), getPayrollRun);
+router.post('/payroll/runs/:id/approve', authorize('payroll.approve'), approvePayrollRun);
 
 // --- Audit ---
 router.get('/audit', authorize('audit.read'), readAudit);

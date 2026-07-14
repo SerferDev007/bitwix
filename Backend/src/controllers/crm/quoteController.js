@@ -19,15 +19,21 @@ const round = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 // Reject out-of-range money inputs: a negative discount would inflate the total
 // AND (being ≤ threshold) auto-approve, bypassing the approval gate entirely.
+const MAX_MONEY = 999999999999.99; // DECIMAL(14,2) ceiling
 function validateQuoteInput(lineItems, discountPct) {
   const disc = Number(discountPct);
   if (!Number.isFinite(disc) || disc < 0 || disc > 100) return 'discount_pct must be a number between 0 and 100.';
+  let subtotal = 0;
   for (const li of lineItems) {
     const qty = Number(li.qty);
     const price = Number(li.unit_price);
     if (!Number.isFinite(qty) || qty < 0 || !Number.isFinite(price) || price < 0) {
       return 'Each line item needs a non-negative qty and unit_price.';
     }
+    // Upper bounds so subtotal/total can't overflow the DECIMAL(14,2) column.
+    if (qty > 1_000_000 || price > MAX_MONEY) return 'A line item qty or unit_price is unreasonably large.';
+    subtotal += qty * price;
+    if (subtotal > MAX_MONEY) return 'The quote total exceeds the maximum allowed amount.';
   }
   return null;
 }
@@ -126,6 +132,7 @@ export async function reviseQuote(req, res, next) {
     if (!(await accountInScope(req.actor, req.scope, q.account_id))) return res.status(403).json({ success: false, message: 'Account outside your scope.' });
 
     const line_items = req.body?.line_items || JSON.parse(typeof q.line_items === 'string' ? q.line_items : JSON.stringify(q.line_items));
+    if (!Array.isArray(line_items) || line_items.length === 0) return res.status(400).json({ success: false, message: 'line_items must be a non-empty array.' });
     const disc = req.body?.discount_pct != null ? Number(req.body.discount_pct) : Number(q.discount_pct);
     const validationError = validateQuoteInput(line_items, disc);
     if (validationError) return res.status(422).json({ success: false, message: validationError });

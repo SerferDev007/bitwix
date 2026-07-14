@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { pathToFileURL } from 'url';
 import { ensureHrSchema } from '../hr/schema.js';
 import { ensureCrmSchema } from '../crm/schema.js';
+import { ensureFmsSchema } from '../fms/schema.js';
 
 dotenv.config();
 
@@ -51,23 +52,23 @@ const services = [
 
 const team = [
   {
-    name: 'Amruta Shejul',
-    role: 'Managing Director & Co-Founder',
+    name: 'Sarita Palkudtewar',
+    role: 'CEO & Co-Founder',
     description:
-      'Co-founder and Managing Director of Bitwix Technologies, driving the company vision, strategy, and growth. Leads operations and client partnerships to deliver reliable digital solutions.',
+      'Chief Executive Officer and Co-Founder of Bitwix Technologies, setting the strategic direction and driving the company growth, partnerships, and client success.',
     image_url: null, // upload a photo from the admin console; shows initials until then
-    skills: ['Business Strategy', 'Leadership', 'Operations', 'Client Partnerships'],
+    skills: ['Leadership', 'Strategy', 'Business Development', 'Client Success'],
     phone: '+91-8261861224',
     email: 'support@bitwix.co.in',
     sort_order: 1,
   },
   {
-    name: 'Sunil Hatkadke',
-    role: 'Developer',
+    name: 'Amruta Shejul',
+    role: 'Managing Director & Founder',
     description:
-      'Developer at Bitwix Technologies, building responsive websites and Android applications end to end. Focused on clean, maintainable code and dependable delivery.',
+      'Co-founder and Managing Director of Bitwix Technologies, driving the company vision, strategy, and growth. Leads operations and client partnerships to deliver reliable digital solutions.',
     image_url: null,
-    skills: ['Full-Stack Development', 'React', 'Node.js', 'Android'],
+    skills: ['Business Strategy', 'Leadership', 'Operations', 'Client Partnerships'],
     phone: '+91-8261861224',
     email: 'support@bitwix.co.in',
     sort_order: 2,
@@ -493,6 +494,11 @@ export async function initializeDatabase() {
   // CRM (dual-plane) tables + bootstrap internal Super Admin.
   console.log('Setting up CRM schema...');
   await ensureCrmSchema(conn);
+
+  // Financial Management System — double-entry ledger, chart of accounts,
+  // cost centers, and the open fiscal period.
+  console.log('Setting up FMS (ledger) schema...');
+  await ensureFmsSchema(conn);
 
   await conn.end();
   console.log('\n✅ Database initialized successfully.');

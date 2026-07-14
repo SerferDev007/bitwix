@@ -142,6 +142,41 @@ export async function ensureHrSchema(conn) {
       CHECK (end_date >= start_date)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`);
 
+  // --- Payroll runs (maker–checker; posts to the FMS ledger on approval) ---
+  await conn.query(`
+    CREATE TABLE IF NOT EXISTS payroll_runs (
+      id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      label       VARCHAR(20) NOT NULL,
+      status      ENUM('DRAFT','APPROVED','POSTED') NOT NULL DEFAULT 'DRAFT',
+      gross_total DECIMAL(14,2) NOT NULL DEFAULT 0,
+      created_by  BIGINT UNSIGNED NOT NULL,
+      approved_by BIGINT UNSIGNED NULL,
+      je_ref      VARCHAR(24) NULL,
+      created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY uq_payroll_label (label),   -- one payroll run per period
+      FOREIGN KEY (created_by) REFERENCES hr_accounts(id),
+      FOREIGN KEY (approved_by) REFERENCES hr_accounts(id),
+      CONSTRAINT payroll_maker_not_checker CHECK (approved_by IS NULL OR approved_by <> created_by)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`);
+
+  await conn.query(`
+    CREATE TABLE IF NOT EXISTS payroll_lines (
+      id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      run_id        BIGINT UNSIGNED NOT NULL,
+      employee_id   INT UNSIGNED NOT NULL,
+      employee_name VARCHAR(120) NOT NULL,
+      cost_center   VARCHAR(20) NOT NULL,
+      gross         DECIMAL(14,2) NOT NULL,
+      tax           DECIMAL(14,2) NOT NULL,
+      net           DECIMAL(14,2) NOT NULL,
+      is_billable   BOOLEAN NOT NULL DEFAULT FALSE,
+      PRIMARY KEY (id),
+      INDEX idx_payline_run (run_id),
+      FOREIGN KEY (run_id) REFERENCES payroll_runs(id) ON DELETE CASCADE,
+      FOREIGN KEY (employee_id) REFERENCES employees(id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`);
+
   await seedRolesAndPermissions(conn);
   await seedLeaveTypes(conn);
   await seedBootstrapSuperAdmin(conn);

@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
 import { Building2, Users2, GitBranch, TrendingUp, Ticket, LogOut, ArrowLeft, Filter, FileSignature } from "lucide-react";
 import { crmApi } from "../lib/crmApi";
+import { SuiteNav } from "../components/SuiteNav";
 
 const nav = [
   { to: "/crm/accounts", label: "Accounts", icon: Users2 },
@@ -23,6 +24,7 @@ export function CrmLayout() {
           <Building2 className="h-6 w-6 text-primary" />
           <div><p className="font-bold leading-tight">Bitwix CRM</p><p className="text-xs text-muted-foreground">Staff console</p></div>
         </div>
+        <SuiteNav />
         <nav className="flex-1 p-3 space-y-1">
           {nav.map((item) => {
             const Icon = item.icon;

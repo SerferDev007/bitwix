@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
-import { crmApi, type Account, type Contact, type PortalUser, type Opportunity } from "../lib/crmApi";
+import { crmApi, type Account, type Contact, type PortalUser, type Opportunity, type Invoice } from "../lib/crmApi";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
-import { ArrowLeft, Loader2, Plus, UserPlus, Ban, Copy, KeyRound } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, UserPlus, Ban, Copy, KeyRound, BadgeCheck } from "lucide-react";
 
 export function AccountDetailPage() {
   const { id } = useParams();
@@ -16,16 +16,17 @@ export function AccountDetailPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [portalUsers, setPortalUsers] = useState<PortalUser[]>([]);
   const [opps, setOpps] = useState<Opportunity[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [invite, setInvite] = useState<{ token: string } | null>(null);
 
   const load = useCallback(async () => {
-    const [a, c, p, o] = await Promise.all([
-      crmApi.account(accountId), crmApi.contacts(accountId), crmApi.portalUsers(accountId), crmApi.opportunities(accountId),
+    const [a, c, p, o, inv] = await Promise.all([
+      crmApi.account(accountId), crmApi.contacts(accountId), crmApi.portalUsers(accountId), crmApi.opportunities(accountId), crmApi.invoices(accountId),
     ]);
     if (!a.success) { setError(a.message || "Not found"); setLoading(false); return; }
-    setAccount(a.data!); setContacts(c.data || []); setPortalUsers(p.data || []); setOpps(o.data || []);
+    setAccount(a.data!); setContacts(c.data || []); setPortalUsers(p.data || []); setOpps(o.data || []); setInvoices(inv.data || []);
     setLoading(false);
   }, [accountId]);
   useEffect(() => { load().catch(() => { setError("Unable to reach the server."); setLoading(false); }); }, [load]);
@@ -46,6 +47,10 @@ export function AccountDetailPage() {
     else setError(res.message || "Provisioning failed.");
   };
   const revoke = async (puId: number) => { await crmApi.revokePortal(puId); load(); };
+  const markPaid = async (invId: number) => {
+    const res = await crmApi.payInvoice(invId);
+    if (res.success) load(); else setError(res.message || "Could not record payment.");
+  };
 
   if (loading) return <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /> Loading…</div>;
   if (error || !account) return <div className="rounded-md bg-red-500/10 text-red-700 p-4">{error || "Not found"}</div>;
@@ -143,6 +148,32 @@ export function AccountDetailPage() {
                 <div key={o.id} className="flex items-center justify-between text-sm border-b pb-1 last:border-0">
                   <span>{o.name}</span>
                   <span className="flex items-center gap-3"><Badge variant="outline">{o.stage}</Badge> <span className="font-medium">${Number(o.amount).toLocaleString()}</span></span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Invoices — recording a payment posts PAYMENT_RECEIVED to the ledger */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Invoices</CardTitle>
+          <p className="text-sm text-muted-foreground">Recording a payment flips the invoice to PAID and posts <span className="font-mono">PAYMENT_RECEIVED</span> (Bank ↔ AR) to the finance ledger.</p>
+        </CardHeader>
+        <CardContent>
+          {invoices.length === 0 ? <p className="text-sm text-muted-foreground">No invoices.</p> : (
+            <div className="space-y-1">
+              {invoices.map((iv) => (
+                <div key={iv.id} className="flex items-center justify-between text-sm border-b pb-1 last:border-0">
+                  <span className="font-mono">{iv.number}</span>
+                  <span className="flex items-center gap-3">
+                    <span className="font-medium">{iv.currency === "USD" ? "$" : "₹"}{Number(iv.amount).toLocaleString()}</span>
+                    <Badge variant="outline">{iv.status}</Badge>
+                    {["DRAFT", "SENT", "OVERDUE"].includes(iv.status) ? (
+                      <Button size="sm" variant="outline" onClick={() => markPaid(iv.id)} className="flex items-center gap-1"><BadgeCheck className="h-4 w-4" /> Mark paid</Button>
+                    ) : iv.paid_at ? <span className="text-xs text-muted-foreground">paid {iv.paid_at}</span> : null}
+                  </span>
                 </div>
               ))}
             </div>

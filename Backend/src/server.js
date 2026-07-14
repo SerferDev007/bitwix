@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import apiRoutes from './routes/index.js';
 import { assertDbConnection } from './config/db.js';
+import { reconcileLedger } from './fms/reconcile.js';
 
 dotenv.config();
 
@@ -77,6 +78,39 @@ async function connectWithRetry(attempts = Number(process.env.DB_CONNECT_RETRIES
   }
 }
 
+// Periodically re-drive any operational fact whose ledger post was dropped, so
+// the best-effort posts are eventually consistent without manual intervention.
+// Interval (seconds) from RECONCILE_INTERVAL_SEC; defaults to 600s in production,
+// disabled elsewhere. Runs never overlap, and the timer is unref'd so it never
+// keeps the process alive on its own.
+function startReconcileScheduler() {
+  const raw = process.env.RECONCILE_INTERVAL_SEC;
+  const sec = raw != null ? Number(raw) : (process.env.NODE_ENV === 'production' ? 600 : 0);
+  if (!Number.isFinite(sec) || sec <= 0) return;
+
+  let running = false;
+  const tick = async () => {
+    if (running) return;
+    running = true;
+    try {
+      const out = await reconcileLedger({ id: null, role: 'SYSTEM' });
+      if (out.deals || out.invoices || out.payroll || out.errors.length) {
+        console.log(`🔁 [reconcile] deals=${out.deals} invoices=${out.invoices} payroll=${out.payroll} errors=${out.errors.length}`);
+      }
+    } catch (err) {
+      console.error('🔁 [reconcile] sweep failed:', err.message);
+    } finally {
+      running = false;
+    }
+  };
+
+  const first = setTimeout(tick, 30_000); // catch anything dropped while we were down
+  const timer = setInterval(tick, sec * 1000);
+  first.unref?.();
+  timer.unref?.();
+  console.log(`🔁 Ledger reconcile scheduler enabled (every ${sec}s).`);
+}
+
 async function start() {
   // Bind the port FIRST so the platform health check (a TCP probe on PORT) passes
   // even while the database is connecting/initializing. A slow or failing DB step
@@ -109,6 +143,8 @@ async function start() {
     console.error('❌ Could not connect to MySQL:', err.code || err.message);
     console.error('   Check the DB_* settings and that the database is reachable.');
   }
+
+  startReconcileScheduler();
 }
 
 start();

@@ -2,13 +2,14 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { Button } from "./ui/button";
-import { Phone, Mail, Menu, X, LayoutDashboard, ChevronDown, IdCard, Building2, Users } from "lucide-react";
+import { Phone, Mail, Menu, X, LayoutDashboard, ChevronDown, IdCard, Building2, Users, Landmark } from "lucide-react";
 
-// Staff/client consoles reachable from the marketing site.
+// The three interlinked systems, plus the client portal, reachable from the
+// marketing site. Each opens its own console (own sign-in).
 const CONSOLES = [
-  { to: "/admin", label: "Operations (Admin)", icon: LayoutDashboard },
   { to: "/hr", label: "Employee Management", icon: IdCard },
   { to: "/crm", label: "CRM", icon: Building2 },
+  { to: "/admin", label: "Financial Management", icon: Landmark },
   { to: "/portal", label: "Client Portal", icon: Users },
 ];
 

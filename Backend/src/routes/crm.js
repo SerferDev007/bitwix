@@ -10,6 +10,7 @@ import {
   listAccountContacts, listAccountPortalUsers, listOpportunities,
   provisionPortalUser, revokePortalUser, approvePortalRequest,
   createOpportunity, updateOpportunityStage, forecast,
+  listAccountInvoices, recordInvoicePayment,
   listTicketsInternal, resolveTicket, readAudit,
 } from '../controllers/crm/internalController.js';
 import {
@@ -31,7 +32,11 @@ router.get('/accounts', internalAuth('account.read.all'), listAccounts);
 router.get('/accounts/:id', internalAuth('account.read.all'), getAccount);
 router.get('/accounts/:id/contacts', internalAuth('account.read.all'), listAccountContacts);
 router.get('/accounts/:id/portal-users', internalAuth('account.read.all'), listAccountPortalUsers);
+router.get('/accounts/:id/invoices', internalAuth('invoice.read'), listAccountInvoices);
 router.post('/contacts', internalAuth('account.create'), createContact);
+
+// Finance records a received payment → posts PAYMENT_RECEIVED to the ledger.
+router.post('/invoices/:id/pay', internalAuth('contract.manage'), recordInvoicePayment);
 
 router.post('/portal-users', internalAuth('portal.user.invite'), provisionPortalUser);
 router.post('/portal-users/:id/revoke', internalAuth('portal.user.revoke'), revokePortalUser);

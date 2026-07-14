@@ -7,6 +7,8 @@ import { ProjectDetailPage } from "./admin/ProjectDetailPage";
 import { EmployeesPage } from "./admin/EmployeesPage";
 import { FinancialPage } from "./admin/FinancialPage";
 import { ClientsPage } from "./admin/ClientsPage";
+import { FmsLedgerPage } from "./admin/FmsLedgerPage";
+import { FmsReportsPage } from "./admin/FmsReportsPage";
 import { LoginPage } from "./admin/LoginPage";
 import { RequireAuth } from "./admin/RequireAuth";
 import { CrmLoginPage } from "./crm/CrmLoginPage";
@@ -34,6 +36,7 @@ import { HrRequireAuth } from "./hr/HrRequireAuth";
 import { HrLayout } from "./hr/HrLayout";
 import { HrEmployeesPage } from "./hr/HrEmployeesPage";
 import { HrLeavePage } from "./hr/HrLeavePage";
+import { HrPayrollPage } from "./hr/HrPayrollPage";
 import { HrAuditPage } from "./hr/HrAuditPage";
 
 export default function App() {
@@ -44,12 +47,14 @@ export default function App() {
         <Route path="/" element={<MarketingPage />} />
         <Route path="/admin/login" element={<LoginPage />} />
         <Route path="/admin" element={<RequireAuth><AdminLayout /></RequireAuth>}>
-          <Route index element={<Navigate to="projects" replace />} />
+          <Route index element={<Navigate to="ledger" replace />} />
           <Route path="projects" element={<ProjectsPage />} />
           <Route path="projects/:id" element={<ProjectDetailPage />} />
           <Route path="employees" element={<EmployeesPage />} />
           <Route path="financial" element={<FinancialPage />} />
           <Route path="clients" element={<ClientsPage />} />
+          <Route path="ledger" element={<FmsLedgerPage />} />
+          <Route path="reports" element={<FmsReportsPage />} />
         </Route>
 
         {/* Employee Management System (HR / EMS) — own login/session + RBAC */}
@@ -59,6 +64,7 @@ export default function App() {
           <Route index element={<Navigate to="employees" replace />} />
           <Route path="employees" element={<HrEmployeesPage />} />
           <Route path="leave" element={<HrLeavePage />} />
+          <Route path="payroll" element={<HrPayrollPage />} />
           <Route path="audit" element={<HrAuditPage />} />
         </Route>
 

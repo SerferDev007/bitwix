@@ -55,6 +55,7 @@ export interface PortalUser { id: number; email: string; role: string; status: s
 export interface Opportunity { id: number; account_id: number; account_name?: string; name: string; stage: string; amount: string | number; probability: number; expected_close: string; lost_reason: string | null; }
 export interface Ticket { id: number; account_id: number; account_name?: string; subject: string; priority: string; status: string; sla_due_at: string | null; resolved_at: string | null; created_at: string; }
 export interface ForecastRow { period: string; pipeline_total: string | number; weighted_forecast: string | number; deal_count: number; }
+export interface Invoice { id: number; number: string; amount: string | number; currency: string; status: string; issued_at: string; due_date: string | null; paid_at: string | null; }
 
 export const crmApi = {
   async login(email: string, password: string) {
@@ -79,6 +80,9 @@ export const crmApi = {
   createOpportunity: (b: { account_id: number; name: string; amount: number; expected_close: string }) => req("/opportunities", { method: "POST", body: JSON.stringify(b) }),
   setStage: (id: number, stage: string, lost_reason?: string) => req(`/opportunities/${id}/stage`, { method: "PATCH", body: JSON.stringify({ stage, lost_reason }) }),
   forecast: () => req<ForecastRow[]>("/forecast"),
+
+  invoices: (accountId: number) => req<Invoice[]>(`/accounts/${accountId}/invoices`),
+  payInvoice: (id: number) => req(`/invoices/${id}/pay`, { method: "POST" }),
 
   tickets: () => req<Ticket[]>("/tickets"),
   resolveTicket: (id: number) => req(`/tickets/${id}/resolve`, { method: "POST" }),

@@ -11,6 +11,7 @@ import authRoutes from './auth.js';
 import hrRoutes from './hr.js';
 import crmRoutes from './crm.js';
 import portalRoutes from './portal.js';
+import fmsRoutes from './fms.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
@@ -67,5 +68,9 @@ router.use('/hr', hrRoutes);
 // route trees with separate middleware (structural isolation, Section 9.1).
 router.use('/crm', crmRoutes);       // internal staff plane
 router.use('/portal', portalRoutes); // external client portal plane
+
+// Financial Management System — the immutable double-entry ledger the other
+// modules post into (payroll, deals, campaigns). Admin-guarded.
+router.use('/fms', fmsRoutes);
 
 export default router;

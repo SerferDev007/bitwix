@@ -3,9 +3,36 @@ import { hashPassword, verifyPassword, generateToken } from '../../hr/password.j
 import { signInternalToken } from '../../crm/token.js';
 import { INTERNAL_MATRIX, scopeToSql } from '../../crm/rbac.js';
 import { writeCrmAudit } from '../../crm/audit.js';
+import { postEvent } from '../../fms/ledger.js';
 
 const STAGE_PROB = { QUALIFICATION: 10, DISCOVERY: 25, PROPOSAL: 50, NEGOTIATION: 75, CLOSED_WON: 100, CLOSED_LOST: 0 };
 const OPEN_STAGES = ['QUALIFICATION', 'DISCOVERY', 'PROPOSAL', 'NEGOTIATION'];
+
+// When a deal is won, emit it to the ledger (Section 4.2 integration contract):
+// booking the contract value as a receivable + deferred revenue. Best-effort and
+// idempotent (eventId keyed on the opportunity) so it never blocks the CRM write
+// and never double-posts on a retry.
+function postDealWonToLedger(opp) {
+  const cents = Math.round(Number(opp.amount) * 100);
+  if (!Number.isFinite(cents) || cents <= 0) return;
+  postEvent({
+    eventId: `opp-won-${opp.id}`,
+    type: 'INVOICE_ISSUED',
+    event: { amount: cents, account_ref_id: opp.account_id },
+  }).catch((err) => console.error('[fms] deal-won ledger post failed:', err.message));
+}
+
+// When a client's payment is recorded, post PAYMENT_RECEIVED (Bank ↔ AR) —
+// completing order-to-cash. Idempotent on the invoice id, best-effort.
+function postPaymentReceivedToLedger(inv) {
+  const cents = Math.round(Number(inv.amount) * 100);
+  if (!Number.isFinite(cents) || cents <= 0) return;
+  postEvent({
+    eventId: `invoice-paid-${inv.id}`,
+    type: 'PAYMENT_RECEIVED',
+    event: { amount: cents, account_ref_id: inv.account_id },
+  }).catch((err) => console.error('[fms] invoice-paid ledger post failed:', err.message));
+}
 
 // --- Auth ---
 export async function login(req, res, next) {
@@ -190,6 +217,12 @@ export async function approvePortalRequest(req, res, next) {
       conn.release();
       return res.status(422).json({ success: false, message: `Email domain does not match the account domain (${pu.domain}).` });
     }
+    // Scope guard (matches provisionPortalUser/revokePortalUser): a rep must not
+    // approve — and receive the activation token for — an account outside scope.
+    if (!(await accountInScope(req.actor, req.scope, pu.account_id))) {
+      conn.release();
+      return res.status(403).json({ success: false, message: 'Account outside your scope.' });
+    }
     await conn.beginTransaction();
     const { raw, hash } = generateToken();
     await conn.query("UPDATE crm_portal_users SET status = 'PENDING_ACTIVATION', approved_by = ? WHERE id = ?", [req.actor.userId, pu.id]);
@@ -210,11 +243,13 @@ export async function createOpportunity(req, res, next) {
   try {
     const { account_id, name, amount, expected_close } = req.body || {};
     if (!account_id || !name || amount == null || !expected_close) return res.status(400).json({ success: false, message: 'account_id, name, amount, expected_close are required.' });
+    const amt = Number(amount);
+    if (!Number.isFinite(amt) || amt < 0 || amt > 999999999999.99) return res.status(422).json({ success: false, message: 'amount must be a non-negative number within range.' });
     if (!(await accountInScope(req.actor, req.scope, account_id))) return res.status(403).json({ success: false, message: 'Account outside your scope.' });
     const [r] = await pool.query(
       `INSERT INTO opportunities (account_id, name, stage, amount, probability, expected_close, owner_id)
        VALUES (?, ?, 'QUALIFICATION', ?, 10, ?, ?)`,
-      [account_id, name.trim(), Number(amount), expected_close, req.actor.userId]
+      [account_id, name.trim(), amt, expected_close, req.actor.userId]
     );
     res.status(201).json({ success: true, data: { id: r.insertId } });
   } catch (err) { next(err); }
@@ -237,12 +272,56 @@ export async function updateOpportunityStage(req, res, next) {
       }
     }
     const closing = ['CLOSED_WON', 'CLOSED_LOST'].includes(stage);
-    await pool.query(
-      'UPDATE opportunities SET stage = ?, probability = ?, lost_reason = ?, closed_at = ? WHERE id = ?',
+    // The status guard makes the close atomic: a concurrent transition that
+    // already closed the row (read above was non-locking) yields affectedRows 0,
+    // so we never post a won-deal to the ledger for a row another request then
+    // overwrote to LOST (the lost-update race).
+    const [upd] = await pool.query(
+      "UPDATE opportunities SET stage = ?, probability = ?, lost_reason = ?, closed_at = ? WHERE id = ? AND stage NOT IN ('CLOSED_WON','CLOSED_LOST')",
       [stage, STAGE_PROB[stage], stage === 'CLOSED_LOST' ? lost_reason : null, closing ? new Date() : null, opp.id]
     );
+    if (upd.affectedRows === 0) return res.status(409).json({ success: false, message: 'Opportunity is closed; immutable.' });
     await writeCrmAudit(pool, req, { action: 'OPPORTUNITY_STAGE_CHANGED', entityType: 'opportunity', entityId: opp.id, accountId: opp.account_id, detail: { from: opp.stage, to: stage } });
+    // Post the won deal to the ledger only now that the CLOSED_WON write landed.
+    // Best-effort + idempotent; the /fms/reconcile sweep is the durable backstop
+    // if this transient post ever fails (a CLOSED_WON with no opp-won-<id> post).
+    if (stage === 'CLOSED_WON') postDealWonToLedger(opp);
     res.json({ success: true, message: `Stage set to ${stage}.` });
+  } catch (err) { next(err); }
+}
+
+// GET /api/crm/accounts/:id/invoices — staff view of an account's invoices.
+export async function listAccountInvoices(req, res, next) {
+  try {
+    if (!(await accountInScope(req.actor, req.scope, req.params.id))) return res.status(404).json({ success: false, message: 'Not found' });
+    const [rows] = await pool.query(
+      `SELECT id, number, amount, currency, status, issued_at, due_date, paid_at
+         FROM invoices WHERE account_id = ? ORDER BY issued_at DESC`,
+      [req.params.id]
+    );
+    res.json({ success: true, count: rows.length, data: rows });
+  } catch (err) { next(err); }
+}
+
+// POST /api/crm/invoices/:id/pay — finance records that a payment arrived. Flips
+// the invoice to PAID and posts PAYMENT_RECEIVED. The affectedRows guard closes
+// the race where two clerks record the same payment; ledger idempotency backs it.
+export async function recordInvoicePayment(req, res, next) {
+  try {
+    const [[inv]] = await pool.query('SELECT * FROM invoices WHERE id = ?', [req.params.id]);
+    if (!inv) return res.status(404).json({ success: false, message: 'Invoice not found.' });
+    if (!(await accountInScope(req.actor, req.scope, inv.account_id))) return res.status(403).json({ success: false, message: 'Account outside your scope.' });
+
+    const [upd] = await pool.query(
+      "UPDATE invoices SET status = 'PAID', paid_at = CURDATE() WHERE id = ? AND status IN ('DRAFT','SENT','OVERDUE')",
+      [inv.id]
+    );
+    if (upd.affectedRows === 0) {
+      return res.status(409).json({ success: false, message: inv.status === 'PAID' ? 'Invoice already paid.' : `Cannot pay a ${inv.status} invoice.` });
+    }
+    await writeCrmAudit(pool, req, { action: 'INVOICE_PAID', entityType: 'invoice', entityId: inv.id, accountId: inv.account_id, detail: { amount: inv.amount } });
+    postPaymentReceivedToLedger(inv);
+    res.json({ success: true, message: 'Payment recorded.' });
   } catch (err) { next(err); }
 }
 
@@ -252,9 +331,15 @@ export async function forecast(req, res, next) {
     let where = "o.stage NOT IN ('CLOSED_WON','CLOSED_LOST')";
     const params = [];
     if (req.actor.role === 'SALES_REP') { where += ' AND o.owner_id = ?'; params.push(req.actor.userId); }
-    else if (req.actor.role === 'SALES_MANAGER' && req.actor.territories.length) {
-      where += ` AND a.territory_id IN (${req.actor.territories.map(() => '?').join(',')})`;
-      params.push(...req.actor.territories);
+    else if (req.actor.role === 'SALES_MANAGER') {
+      if (req.actor.territories.length) {
+        where += ` AND a.territory_id IN (${req.actor.territories.map(() => '?').join(',')})`;
+        params.push(...req.actor.territories);
+      } else {
+        // No territory assigned → fail CLOSED (matches scopeToSql's '1=0'), never
+        // drop the filter and leak company-wide pipeline financials.
+        where += ' AND 1=0';
+      }
     } // SUPER_ADMIN → all
     const [rows] = await pool.query(
       `SELECT DATE_FORMAT(o.expected_close, '%Y-%m') AS period,
@@ -284,7 +369,14 @@ export async function listTicketsInternal(req, res, next) {
 
 export async function resolveTicket(req, res, next) {
   try {
-    const [[t]] = await pool.query('SELECT * FROM tickets WHERE id = ?', [req.params.id]);
+    // Apply the same per-role scope predicate as the ticket list, so an agent
+    // can only resolve tickets within scope (assigned / territory / owned).
+    // Out-of-scope → 404 (no existence leak), never a blind resolve-by-id.
+    const { sql, params } = scopeToSql(req.scope, { idCol: 'a.id', ownerCol: 'a.owner_id', accountManagerCol: 'a.account_manager_id', territoryCol: 'a.territory_id', acctCol: 't.account_id' });
+    const [[t]] = await pool.query(
+      `SELECT t.* FROM tickets t JOIN accounts a ON a.id = t.account_id WHERE t.id = ? AND (${sql})`,
+      [req.params.id, ...params]
+    );
     if (!t) return res.status(404).json({ success: false, message: 'Ticket not found.' });
     await pool.query("UPDATE tickets SET status = 'RESOLVED', resolved_at = NOW(), assignee_id = ? WHERE id = ?", [req.actor.userId, t.id]);
     await writeCrmAudit(pool, req, { action: 'TICKET_RESOLVED', entityType: 'ticket', entityId: t.id, accountId: t.account_id });

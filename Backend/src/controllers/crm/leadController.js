@@ -26,9 +26,13 @@ export async function createLead(req, res, next) {
     const { email, first_name, company_name, source = 'WEB_FORM' } = req.body || {};
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ success: false, errors: { email: 'A valid email is required.' } });
 
-    // Dedupe: a person who fills three forms is one lead, not three.
-    const [[existing]] = await pool.query('SELECT id, status FROM leads WHERE email = ?', [email.trim()]);
-    if (existing) return res.status(200).json({ success: true, data: { id: existing.id, deduped: true, status: existing.status }, message: 'Existing lead matched by email.' });
+    // Dedupe: a person who fills three forms is one lead, not three. Don't leak a
+    // lead the caller can't act on (cross-rep enumeration oracle) — reply generic.
+    const [[existing]] = await pool.query('SELECT id, status, owner_id FROM leads WHERE email = ?', [email.trim()]);
+    if (existing) {
+      if (!canActOnLead(req.actor, existing)) return res.status(200).json({ success: true, message: 'Lead received.' });
+      return res.status(200).json({ success: true, data: { id: existing.id, deduped: true, status: existing.status }, message: 'Existing lead matched by email.' });
+    }
 
     const signals = buildSignals(req.body);
     const score = scoreLead(signals);
@@ -43,7 +47,8 @@ export async function createLead(req, res, next) {
     } catch (err) {
       // Concurrent same-email submission won the race — dedupe gracefully, not 500.
       if (err.code === 'ER_DUP_ENTRY') {
-        const [[ex]] = await pool.query('SELECT id, status FROM leads WHERE email = ?', [email.trim()]);
+        const [[ex]] = await pool.query('SELECT id, status, owner_id FROM leads WHERE email = ?', [email.trim()]);
+        if (ex && !canActOnLead(req.actor, ex)) return res.status(200).json({ success: true, message: 'Lead received.' });
         return res.status(200).json({ success: true, data: { id: ex?.id, deduped: true, status: ex?.status }, message: 'Existing lead matched by email.' });
       }
       throw err;
@@ -70,7 +75,9 @@ export async function rescoreLead(req, res, next) {
     const score = scoreLead(signals);
     // Auto-promote to MQL when the score crosses the threshold (marketing→sales handoff rule).
     const status = lead.status === 'NEW' && isMql(score) ? 'MQL' : lead.status;
-    await pool.query('UPDATE leads SET score = ?, signals = ?, status = ? WHERE id = ?', [score, JSON.stringify(signals), status, lead.id]);
+    // Guard the write against a concurrently-committed conversion (TOCTOU).
+    const [u] = await pool.query("UPDATE leads SET score = ?, signals = ?, status = ? WHERE id = ? AND status <> 'CONVERTED'", [score, JSON.stringify(signals), status, lead.id]);
+    if (u.affectedRows === 0) return res.status(409).json({ success: false, message: 'Lead already converted.' });
     res.json({ success: true, data: { score, status } });
   } catch (err) { next(err); }
 }
@@ -89,7 +96,8 @@ export async function updateLeadStatus(req, res, next) {
     if (status === 'SQL' && !['WORKING', 'MQL'].includes(lead.status)) return res.status(422).json({ success: false, message: 'Only a WORKING or MQL lead can be accepted as SQL.' });
     if (status === 'DISQUALIFIED' && !reason) return res.status(422).json({ success: false, message: 'A reason is required to disqualify a lead.' });
 
-    await pool.query('UPDATE leads SET status = ?, reject_reason = ? WHERE id = ?', [status, status === 'DISQUALIFIED' ? reason : lead.reject_reason, lead.id]);
+    const [u] = await pool.query("UPDATE leads SET status = ?, reject_reason = ? WHERE id = ? AND status <> 'CONVERTED'", [status, status === 'DISQUALIFIED' ? reason : lead.reject_reason, lead.id]);
+    if (u.affectedRows === 0) return res.status(409).json({ success: false, message: 'Lead already converted.' });
     await writeCrmAudit(pool, req, { action: 'LEAD_STATUS_CHANGED', entityType: 'lead', entityId: lead.id, detail: { from: lead.status, to: status } });
     res.json({ success: true, message: `Lead → ${status}.` });
   } catch (err) { next(err); }
@@ -100,12 +108,17 @@ export async function convertLead(req, res, next) {
   const conn = await pool.getConnection();
   try {
     const { amount = 0, expected_close } = req.body || {};
+    const amt = Number(amount);
+    if (!Number.isFinite(amt) || amt < 0 || amt > 999999999999.99) { conn.release(); return res.status(422).json({ success: false, message: 'amount must be a non-negative number within range.' }); }
     await conn.beginTransaction();
     // Lock the lead row so two concurrent converts can't both create an account
     // graph (the CONVERTED guard must hold across the whole conversion).
     const [[lead]] = await conn.query('SELECT * FROM leads WHERE id = ? FOR UPDATE', [req.params.id]);
     if (!lead || !canActOnLead(req.actor, lead)) { await conn.rollback(); conn.release(); return res.status(404).json({ success: false, message: 'Lead not found.' }); }
     if (lead.status === 'CONVERTED') { await conn.rollback(); conn.release(); return res.status(409).json({ success: false, message: 'Lead already converted.' }); }
+    // Only a qualified lead converts — a DISQUALIFIED or raw NEW lead must be
+    // worked/qualified first (business-rule gate).
+    if (!['WORKING', 'MQL', 'SQL'].includes(lead.status)) { await conn.rollback(); conn.release(); return res.status(422).json({ success: false, message: `A ${lead.status} lead cannot be converted; qualify it first.` }); }
 
     const [acc] = await conn.query(
       `INSERT INTO accounts (name, owner_id, status, portal_tier) VALUES (?, ?, 'PROSPECT', 'NONE')`,
@@ -120,7 +133,7 @@ export async function convertLead(req, res, next) {
     const [opp] = await conn.query(
       `INSERT INTO opportunities (account_id, name, stage, amount, probability, expected_close, owner_id)
        VALUES (?, ?, 'QUALIFICATION', ?, 10, ?, ?)`,
-      [accountId, `${lead.company_name || 'New'} opportunity`, Number(amount) || 0, expected_close || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10), req.actor.userId]
+      [accountId, `${lead.company_name || 'New'} opportunity`, amt, expected_close || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10), req.actor.userId]
     );
     // The lead row is never deleted — campaign attribution survives conversion.
     await conn.query("UPDATE leads SET status = 'CONVERTED', converted_account_id = ? WHERE id = ?", [accountId, lead.id]);

@@ -33,13 +33,24 @@ export function verifyToken(token) {
   }
 }
 
-// Express middleware: require a valid Bearer token.
+// Express middleware: require a valid ADMIN-plane Bearer token.
+//
+// Signature validity alone is NOT sufficient authorization here. The CRM and HR
+// planes fall back to signing with AUTH_SECRET when their own secrets are unset
+// (the default deployment), so a portal/staff/HR token would verify against the
+// same key. A genuine admin token carries role:'admin' and NONE of the
+// cross-plane claims (plane / ver / acc); every other plane's token carries at
+// least one of those. Requiring the admin shape blocks a client-portal or
+// low-privilege staff token from reaching admin-only + finance (ledger) routes.
 export function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
   const payload = verifyToken(token);
   if (!payload) {
     return res.status(401).json({ success: false, message: 'Authentication required.' });
+  }
+  if (payload.role !== 'admin' || payload.plane != null || payload.ver != null || payload.acc != null) {
+    return res.status(403).json({ success: false, message: 'Admin credentials required.' });
   }
   req.admin = payload;
   next();

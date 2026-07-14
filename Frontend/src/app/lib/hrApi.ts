@@ -88,6 +88,14 @@ export interface AuditEntry {
   entity_type: string; entity_id: number; ip_address: string | null; created_at: string;
 }
 export interface Activation { token: string; expiresInHours?: number; url: string; }
+export interface PayrollRun {
+  id: number; label: string; status: string; gross_total: string | number;
+  created_by: number; approved_by: number | null; je_ref: string | null; created_at: string; employees?: number;
+}
+export interface PayrollLine {
+  employee_id: number; employee_name: string; cost_center: string;
+  gross: string | number; tax: string | number; net: string | number; is_billable: number | boolean;
+}
 
 // Mirrors ROLES in Backend/src/hr/rbac.js.
 export const HR_ROLES = ["SUPER_ADMIN", "HR_ADMIN", "HR_EXEC", "MANAGER", "EMPLOYEE"];
@@ -123,4 +131,9 @@ export const hrApi = {
   rejectLeave: (id: number, note?: string) => req(`/leave/requests/${id}/reject`, { method: "POST", body: JSON.stringify({ note }) }),
 
   audit: (limit = 100) => req<AuditEntry[]>(`/audit?limit=${limit}`),
+
+  payrollRuns: () => req<PayrollRun[]>("/payroll/runs"),
+  payrollRun: (id: number) => req<PayrollRun & { lines: PayrollLine[] }>(`/payroll/runs/${id}`),
+  createPayrollRun: (label?: string) => req<{ id: number; status: string; employees: number; gross_total: string }>("/payroll/runs", { method: "POST", body: JSON.stringify({ label }) }),
+  approvePayrollRun: (id: number) => req(`/payroll/runs/${id}/approve`, { method: "POST" }),
 };
