@@ -6,7 +6,8 @@ import rateLimit from 'express-rate-limit';
 import { internalAuth } from '../middleware/crmAuth.js';
 import {
   login, me, logout,
-  createAccount, listAccounts, createContact,
+  createAccount, listAccounts, getAccount, createContact,
+  listAccountContacts, listAccountPortalUsers, listOpportunities,
   provisionPortalUser, revokePortalUser, approvePortalRequest,
   createOpportunity, updateOpportunityStage, forecast,
   listTicketsInternal, resolveTicket, readAudit,
@@ -21,12 +22,16 @@ router.post('/auth/logout', internalAuth(null), logout);
 
 router.post('/accounts', internalAuth('account.create'), createAccount);
 router.get('/accounts', internalAuth('account.read.all'), listAccounts);
+router.get('/accounts/:id', internalAuth('account.read.all'), getAccount);
+router.get('/accounts/:id/contacts', internalAuth('account.read.all'), listAccountContacts);
+router.get('/accounts/:id/portal-users', internalAuth('account.read.all'), listAccountPortalUsers);
 router.post('/contacts', internalAuth('account.create'), createContact);
 
 router.post('/portal-users', internalAuth('portal.user.invite'), provisionPortalUser);
 router.post('/portal-users/:id/revoke', internalAuth('portal.user.revoke'), revokePortalUser);
 router.post('/portal-requests/:id/approve', internalAuth('portal.request.approve'), approvePortalRequest);
 
+router.get('/opportunities', internalAuth('opportunity.manage'), listOpportunities);
 router.post('/opportunities', internalAuth('opportunity.manage'), createOpportunity);
 router.patch('/opportunities/:id/stage', internalAuth('opportunity.manage'), updateOpportunityStage);
 router.get('/forecast', internalAuth('forecast.read'), forecast);

@@ -9,6 +9,14 @@ import { FinancialPage } from "./admin/FinancialPage";
 import { ClientsPage } from "./admin/ClientsPage";
 import { LoginPage } from "./admin/LoginPage";
 import { RequireAuth } from "./admin/RequireAuth";
+import { CrmLoginPage } from "./crm/CrmLoginPage";
+import { CrmRequireAuth } from "./crm/CrmRequireAuth";
+import { CrmLayout } from "./crm/CrmLayout";
+import { AccountsPage } from "./crm/AccountsPage";
+import { AccountDetailPage } from "./crm/AccountDetailPage";
+import { PipelinePage } from "./crm/PipelinePage";
+import { ForecastPage } from "./crm/ForecastPage";
+import { TicketsPage } from "./crm/TicketsPage";
 
 export default function App() {
   return (
@@ -24,6 +32,17 @@ export default function App() {
           <Route path="employees" element={<EmployeesPage />} />
           <Route path="financial" element={<FinancialPage />} />
           <Route path="clients" element={<ClientsPage />} />
+        </Route>
+
+        {/* CRM staff console — its own login/session (internal plane) */}
+        <Route path="/crm/login" element={<CrmLoginPage />} />
+        <Route path="/crm" element={<CrmRequireAuth><CrmLayout /></CrmRequireAuth>}>
+          <Route index element={<Navigate to="accounts" replace />} />
+          <Route path="accounts" element={<AccountsPage />} />
+          <Route path="accounts/:id" element={<AccountDetailPage />} />
+          <Route path="pipeline" element={<PipelinePage />} />
+          <Route path="forecast" element={<ForecastPage />} />
+          <Route path="tickets" element={<TicketsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -87,6 +87,51 @@ export async function createContact(req, res, next) {
   }
 }
 
+export async function getAccount(req, res, next) {
+  try {
+    const { sql, params } = scopeToSql(req.scope);
+    const [[row]] = await pool.query(`SELECT * FROM accounts WHERE id = ? AND (${sql})`, [req.params.id, ...params]);
+    if (!row) return res.status(404).json({ success: false, message: 'Not found' }); // 404 outside scope — no oracle
+    res.json({ success: true, data: row });
+  } catch (err) { next(err); }
+}
+
+export async function listAccountContacts(req, res, next) {
+  try {
+    if (!(await accountInScope(req.actor, req.scope, req.params.id))) return res.status(404).json({ success: false, message: 'Not found' });
+    const [rows] = await pool.query('SELECT id, first_name, last_name, email, title, is_primary, status FROM contacts WHERE account_id = ? ORDER BY id', [req.params.id]);
+    res.json({ success: true, count: rows.length, data: rows });
+  } catch (err) { next(err); }
+}
+
+export async function listAccountPortalUsers(req, res, next) {
+  try {
+    if (!(await accountInScope(req.actor, req.scope, req.params.id))) return res.status(404).json({ success: false, message: 'Not found' });
+    const [rows] = await pool.query(
+      `SELECT pu.id, pu.email, pu.role, pu.status, c.first_name, c.last_name
+         FROM crm_portal_users pu JOIN contacts c ON c.id = pu.contact_id
+        WHERE pu.account_id = ? ORDER BY pu.id`,
+      [req.params.id]
+    );
+    res.json({ success: true, count: rows.length, data: rows });
+  } catch (err) { next(err); }
+}
+
+export async function listOpportunities(req, res, next) {
+  try {
+    const { sql, params } = scopeToSql(req.scope, { idCol: 'a.id', ownerCol: 'o.owner_id', accountManagerCol: 'a.account_manager_id', territoryCol: 'a.territory_id', acctCol: 'o.account_id' });
+    const filters = [sql];
+    const p = [...params];
+    if (req.query.account_id) { filters.push('o.account_id = ?'); p.push(req.query.account_id); }
+    const [rows] = await pool.query(
+      `SELECT o.*, a.name AS account_name FROM opportunities o JOIN accounts a ON a.id = o.account_id
+        WHERE ${filters.join(' AND ')} ORDER BY o.expected_close ASC`,
+      p
+    );
+    res.json({ success: true, count: rows.length, data: rows });
+  } catch (err) { next(err); }
+}
+
 // --- Portal provisioning (vendor-controlled) ---
 export async function provisionPortalUser(req, res, next) {
   const conn = await pool.getConnection();
