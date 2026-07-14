@@ -4,7 +4,7 @@ import { authorize, authenticated } from '../middleware/hrAuth.js';
 import { login, activate, logout, me } from '../controllers/hr/authController.js';
 import {
   provisionEmployee, listEmployees, getEmployee, assignRole,
-  deactivateEmployee, adminResetPassword, readAudit,
+  deactivateEmployee, adminResetPassword, readAudit, updateEmployee, getEmployeePayslips,
 } from '../controllers/hr/accountController.js';
 import {
   listLeaveTypes, getBalance, applyLeave, listRequests, approveLeave, rejectLeave,
@@ -30,6 +30,8 @@ router.get('/auth/me', authenticated(), me);
 router.post('/employees', authorize('employee.create'), provisionEmployee);
 router.get('/employees', authorize('employee.read.self'), listEmployees);   // scope narrows the rows
 router.get('/employees/:id', authorize('employee.read.self'), getEmployee); // scope → 403 if outside
+router.put('/employees/:id', authorize('employee.update.all'), updateEmployee);
+router.get('/employees/:id/payslips', authorize('payslip.read.self'), getEmployeePayslips);
 router.post('/employees/:id/deactivate', authorize('employee.deactivate'), deactivateEmployee);
 router.put('/accounts/:id/role', authorize('user.role.assign'), assignRole);
 router.post('/accounts/:id/reset-password', authorize('user.password.reset'), adminResetPassword);

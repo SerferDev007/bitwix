@@ -67,6 +67,9 @@ export interface Employee {
   hr_status: string;
   monthly_salary: string | number | null; // field-filtered by the backend
   engagement_state: string;
+  department: string | null;
+  date_of_joining: string | null;
+  date_of_exit: string | null;
   account_id: number | null;
   account_status: string | null;
   account_role: string | null; // RBAC role of the login account
@@ -96,6 +99,10 @@ export interface PayrollLine {
   employee_id: number; employee_name: string; cost_center: string;
   gross: string | number; tax: string | number; net: string | number; is_billable: number | boolean;
 }
+export interface Payslip {
+  run_id: number; label: string; status: string; je_ref: string | null;
+  gross: string | number; tax: string | number; net: string | number; cost_center: string;
+}
 
 // Mirrors ROLES in Backend/src/hr/rbac.js.
 export const HR_ROLES = ["SUPER_ADMIN", "HR_ADMIN", "HR_EXEC", "MANAGER", "EMPLOYEE"];
@@ -117,8 +124,12 @@ export const hrApi = {
   provisionEmployee: (b: {
     name: string; work_email: string; role?: string;
     manager_id?: number | null; employee_code?: string; designation?: string;
+    department?: string; date_of_joining?: string; monthly_salary?: number | string;
   }) => req<{ employeeId: number; accountId: number; activation: Activation }>("/employees", { method: "POST", body: JSON.stringify(b) }),
+  updateEmployee: (id: number, b: { designation?: string; department?: string; date_of_joining?: string; date_of_exit?: string; monthly_salary?: number | string | null }) =>
+    req(`/employees/${id}`, { method: "PUT", body: JSON.stringify(b) }),
   deactivateEmployee: (id: number) => req(`/employees/${id}/deactivate`, { method: "POST" }),
+  payslips: (employeeId: number) => req<Payslip[]>(`/employees/${employeeId}/payslips`),
   assignRole: (accountId: number, role: string) => req(`/accounts/${accountId}/role`, { method: "PUT", body: JSON.stringify({ role }) }),
   resetPassword: (accountId: number) => req<{ token: string }>(`/accounts/${accountId}/reset-password`, { method: "POST" }),
 

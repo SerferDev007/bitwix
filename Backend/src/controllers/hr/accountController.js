@@ -11,9 +11,17 @@ const INVITE_TTL_HOURS = 72;
 export async function provisionEmployee(req, res, next) {
   const conn = await pool.getConnection();
   try {
-    const { name, work_email, role = 'EMPLOYEE', manager_id, employee_code, designation } = req.body || {};
+    const { name, work_email, role = 'EMPLOYEE', manager_id, employee_code, designation, department, date_of_joining, monthly_salary } = req.body || {};
     if (!name || !name.trim()) { conn.release(); return res.status(400).json({ success: false, errors: { name: 'Name is required.' } }); }
     if (!work_email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(work_email)) { conn.release(); return res.status(400).json({ success: false, errors: { work_email: 'A valid work email is required.' } }); }
+    // Salary may only be set by SUPER_ADMIN / HR_ADMIN (field-level rule, Section 8.3).
+    let salaryVal = null;
+    if (monthly_salary != null && monthly_salary !== '' && ['SUPER_ADMIN', 'HR_ADMIN'].includes(req.actor.role)) {
+      const s = Number(monthly_salary);
+      if (!Number.isFinite(s) || s < 0 || s > 9999999999.99) { conn.release(); return res.status(422).json({ success: false, message: 'Invalid salary amount.' }); }
+      salaryVal = s;
+    }
+    const joining = date_of_joining || new Date().toISOString().slice(0, 10);
 
     const [[roleRow]] = await conn.query('SELECT id, name FROM roles WHERE name = ?', [role]);
     if (!roleRow) { conn.release(); return res.status(400).json({ success: false, message: `Unknown role: ${role}` }); }
@@ -21,9 +29,9 @@ export async function provisionEmployee(req, res, next) {
     await conn.beginTransaction();
 
     const [empResult] = await conn.query(
-      `INSERT INTO employees (name, role, work_email, manager_id, employee_code, hr_status, engagement_state)
-       VALUES (?, ?, ?, ?, ?, 'active', 'engaged')`,
-      [name.trim(), designation || role, work_email.trim(), manager_id || null, employee_code || null]
+      `INSERT INTO employees (name, role, work_email, manager_id, employee_code, department, monthly_salary, date_of_joining, hr_status, engagement_state)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', 'engaged')`,
+      [name.trim(), designation || role, work_email.trim(), manager_id || null, employee_code || null, department || null, salaryVal, joining]
     );
     const employeeId = empResult.insertId;
 
@@ -71,7 +79,7 @@ export async function listEmployees(req, res, next) {
     const { sql, params } = scopeToSql(req.scope, { idCol: 'e.id', mgrCol: 'e.manager_id' });
     const [rows] = await pool.query(
       `SELECT e.id, e.name, e.role, e.work_email, e.employee_code, e.manager_id, e.hr_status,
-              e.monthly_salary, e.engagement_state,
+              e.monthly_salary, e.engagement_state, e.department, e.date_of_joining, e.date_of_exit,
               a.id AS account_id, a.status AS account_status, ar.name AS account_role
          FROM employees e
          LEFT JOIN hr_accounts a ON a.employee_id = e.id
@@ -91,7 +99,8 @@ export async function getEmployee(req, res, next) {
   try {
     const { sql, params } = scopeToSql(req.scope);
     const [[row]] = await pool.query(
-      `SELECT id, name, role, work_email, employee_code, manager_id, hr_status, monthly_salary, engagement_state
+      `SELECT id, name, role, work_email, employee_code, manager_id, hr_status, monthly_salary, engagement_state,
+              department, date_of_joining, date_of_exit
          FROM employees WHERE id = ? AND (${sql})`,
       [req.params.id, ...params]
     );
@@ -100,6 +109,27 @@ export async function getEmployee(req, res, next) {
   } catch (err) {
     next(err);
   }
+}
+
+// GET /api/hr/employees/:id/payslips — finalized payroll lines for an employee,
+// newest first. Salary data: only the employee themselves (SELF) or an HR Admin /
+// Super Admin may read it (field-level rule).
+export async function getEmployeePayslips(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+    const isSelf = Number(req.actor.employeeId) === id;
+    if (!isSelf && !['SUPER_ADMIN', 'HR_ADMIN'].includes(req.actor.role)) {
+      return res.status(403).json({ success: false, message: 'Not permitted to view these payslips.' });
+    }
+    const [rows] = await pool.query(
+      `SELECT pl.run_id, pr.label, pr.status, pr.je_ref, pl.gross, pl.tax, pl.net, pl.cost_center
+         FROM payroll_lines pl JOIN payroll_runs pr ON pr.id = pl.run_id
+        WHERE pl.employee_id = ? AND pr.status IN ('APPROVED', 'POSTED')
+        ORDER BY pr.label DESC, pr.id DESC`,
+      [id]
+    );
+    res.json({ success: true, count: rows.length, data: rows });
+  } catch (err) { next(err); }
 }
 
 // PUT /api/hr/accounts/:id/role — reassign role, bump token_version.
@@ -128,7 +158,7 @@ export async function deactivateEmployee(req, res, next) {
     if (!emp) { conn.release(); return res.status(404).json({ success: false, message: 'Employee not found.' }); }
 
     await conn.beginTransaction();
-    await conn.query("UPDATE employees SET hr_status = 'terminated' WHERE id = ?", [emp.id]);
+    await conn.query("UPDATE employees SET hr_status = 'terminated', date_of_exit = COALESCE(date_of_exit, CURDATE()) WHERE id = ?", [emp.id]);
     await conn.query("UPDATE hr_accounts SET status = 'DEACTIVATED', token_version = token_version + 1 WHERE employee_id = ?", [emp.id]);
     await writeAudit(conn, { ...auditCtx(req), action: 'EMPLOYEE_DEACTIVATED', entityType: 'employee', entityId: emp.id, before: { hr_status: emp.hr_status }, after: { hr_status: 'terminated' } });
     await conn.commit();
@@ -139,6 +169,40 @@ export async function deactivateEmployee(req, res, next) {
     conn.release();
     next(err);
   }
+}
+
+// PUT /api/hr/employees/:id — maintain HR master data (salary feed, department,
+// joining/exit dates, designation). Scope-guarded; salary edits are SUPER_ADMIN/
+// HR_ADMIN only (field-level rule).
+export async function updateEmployee(req, res, next) {
+  try {
+    const { sql, params } = scopeToSql(req.scope);
+    const [[emp]] = await pool.query(`SELECT id FROM employees WHERE id = ? AND (${sql})`, [req.params.id, ...params]);
+    if (!emp) return res.status(404).json({ success: false, message: 'Employee not found.' });
+
+    const b = req.body || {};
+    const sets = [];
+    const vals = [];
+    if (b.designation !== undefined) { sets.push('role = ?'); vals.push(String(b.designation).slice(0, 120)); }
+    if (b.department !== undefined) { sets.push('department = ?'); vals.push(b.department || null); }
+    if (b.date_of_joining !== undefined) { sets.push('date_of_joining = ?'); vals.push(b.date_of_joining || null); }
+    if (b.date_of_exit !== undefined) { sets.push('date_of_exit = ?'); vals.push(b.date_of_exit || null); }
+    if (b.monthly_salary !== undefined) {
+      if (!['SUPER_ADMIN', 'HR_ADMIN'].includes(req.actor.role)) return res.status(403).json({ success: false, message: 'Only HR Admin may change salary.' });
+      if (b.monthly_salary === null || b.monthly_salary === '') { sets.push('monthly_salary = NULL'); }
+      else {
+        const s = Number(b.monthly_salary);
+        if (!Number.isFinite(s) || s < 0 || s > 9999999999.99) return res.status(422).json({ success: false, message: 'Invalid salary amount.' });
+        sets.push('monthly_salary = ?'); vals.push(s);
+      }
+    }
+    if (!sets.length) return res.status(400).json({ success: false, message: 'Nothing to update.' });
+
+    vals.push(emp.id);
+    await pool.query(`UPDATE employees SET ${sets.join(', ')} WHERE id = ?`, vals);
+    await writeAudit(pool, { ...auditCtx(req), action: 'EMPLOYEE_UPDATED', entityType: 'employee', entityId: emp.id, after: { fields: sets.map((s) => s.split(' ')[0]) } });
+    res.json({ success: true, message: 'Employee updated.' });
+  } catch (err) { next(err); }
 }
 
 // POST /api/hr/accounts/:id/reset-password — admin path: re-invite (HR never sets it).

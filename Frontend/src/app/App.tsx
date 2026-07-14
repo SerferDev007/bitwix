@@ -38,6 +38,7 @@ import { HrEmployeesPage } from "./hr/HrEmployeesPage";
 import { HrLeavePage } from "./hr/HrLeavePage";
 import { HrPayrollPage } from "./hr/HrPayrollPage";
 import { HrAuditPage } from "./hr/HrAuditPage";
+import { MyDocumentsPage } from "./hr/MyDocumentsPage";
 
 export default function App() {
   return (
@@ -64,6 +65,7 @@ export default function App() {
           <Route index element={<Navigate to="employees" replace />} />
           <Route path="employees" element={<HrEmployeesPage />} />
           <Route path="leave" element={<HrLeavePage />} />
+          <Route path="my-documents" element={<MyDocumentsPage />} />
           <Route path="payroll" element={<HrPayrollPage />} />
           <Route path="audit" element={<HrAuditPage />} />
         </Route>

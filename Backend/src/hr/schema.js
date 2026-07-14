@@ -12,6 +12,9 @@ export async function ensureHrSchema(conn) {
   await addColumnIfMissing(conn, 'employees', 'manager_id', 'INT UNSIGNED NULL');
   await addColumnIfMissing(conn, 'employees', 'hr_status',
     "ENUM('active','on_leave','suspended','terminated') NOT NULL DEFAULT 'active'");
+  await addColumnIfMissing(conn, 'employees', 'department', 'VARCHAR(80) NULL');
+  await addColumnIfMissing(conn, 'employees', 'date_of_joining', 'DATE NULL');
+  await addColumnIfMissing(conn, 'employees', 'date_of_exit', 'DATE NULL');
 
   await conn.query(`
     CREATE TABLE IF NOT EXISTS roles (
