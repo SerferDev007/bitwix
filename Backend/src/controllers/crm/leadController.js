@@ -8,6 +8,12 @@ function leadScope(actor) {
   return actor.role === 'SALES_REP' ? { sql: 'owner_id = ?', params: [actor.userId] } : { sql: '1=1', params: [] };
 }
 
+// Row-level guard for single-lead operations: a Sales Rep may only act on leads
+// they own; broader internal roles may act on any. Prevents cross-rep tampering.
+function canActOnLead(actor, lead) {
+  return actor.role !== 'SALES_REP' || lead.owner_id === actor.userId;
+}
+
 function buildSignals(body) {
   const s = { ...(body.signals || {}) };
   if (s.free_email_domain === undefined) s.free_email_domain = isFreeEmail(body.email);
@@ -27,11 +33,21 @@ export async function createLead(req, res, next) {
     const signals = buildSignals(req.body);
     const score = scoreLead(signals);
     const status = isMql(score) ? 'MQL' : 'NEW';
-    const [r] = await pool.query(
-      `INSERT INTO leads (email, first_name, company_name, source, score, signals, status, owner_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [email.trim(), first_name || null, company_name || null, source, score, JSON.stringify(signals), status, req.actor.userId]
-    );
+    let r;
+    try {
+      [r] = await pool.query(
+        `INSERT INTO leads (email, first_name, company_name, source, score, signals, status, owner_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [email.trim(), first_name || null, company_name || null, source, score, JSON.stringify(signals), status, req.actor.userId]
+      );
+    } catch (err) {
+      // Concurrent same-email submission won the race — dedupe gracefully, not 500.
+      if (err.code === 'ER_DUP_ENTRY') {
+        const [[ex]] = await pool.query('SELECT id, status FROM leads WHERE email = ?', [email.trim()]);
+        return res.status(200).json({ success: true, data: { id: ex?.id, deduped: true, status: ex?.status }, message: 'Existing lead matched by email.' });
+      }
+      throw err;
+    }
     await writeCrmAudit(pool, req, { action: 'LEAD_CREATED', entityType: 'lead', entityId: r.insertId, detail: { score, status } });
     res.status(201).json({ success: true, data: { id: r.insertId, score, status } });
   } catch (err) { next(err); }
@@ -49,7 +65,7 @@ export async function listLeads(req, res, next) {
 export async function rescoreLead(req, res, next) {
   try {
     const [[lead]] = await pool.query('SELECT * FROM leads WHERE id = ?', [req.params.id]);
-    if (!lead) return res.status(404).json({ success: false, message: 'Lead not found.' });
+    if (!lead || !canActOnLead(req.actor, lead)) return res.status(404).json({ success: false, message: 'Lead not found.' });
     const signals = buildSignals({ email: lead.email, signals: req.body?.signals });
     const score = scoreLead(signals);
     // Auto-promote to MQL when the score crosses the threshold (marketing→sales handoff rule).
@@ -64,7 +80,7 @@ export async function updateLeadStatus(req, res, next) {
   try {
     const { status, reason } = req.body || {};
     const [[lead]] = await pool.query('SELECT * FROM leads WHERE id = ?', [req.params.id]);
-    if (!lead) return res.status(404).json({ success: false, message: 'Lead not found.' });
+    if (!lead || !canActOnLead(req.actor, lead)) return res.status(404).json({ success: false, message: 'Lead not found.' });
     if (lead.status === 'CONVERTED') return res.status(409).json({ success: false, message: 'Lead already converted.' });
 
     const allowed = ['WORKING', 'MQL', 'SQL', 'DISQUALIFIED'];
@@ -83,12 +99,14 @@ export async function updateLeadStatus(req, res, next) {
 export async function convertLead(req, res, next) {
   const conn = await pool.getConnection();
   try {
-    const [[lead]] = await conn.query('SELECT * FROM leads WHERE id = ?', [req.params.id]);
-    if (!lead) { conn.release(); return res.status(404).json({ success: false, message: 'Lead not found.' }); }
-    if (lead.status === 'CONVERTED') { conn.release(); return res.status(409).json({ success: false, message: 'Lead already converted.' }); }
-
     const { amount = 0, expected_close } = req.body || {};
     await conn.beginTransaction();
+    // Lock the lead row so two concurrent converts can't both create an account
+    // graph (the CONVERTED guard must hold across the whole conversion).
+    const [[lead]] = await conn.query('SELECT * FROM leads WHERE id = ? FOR UPDATE', [req.params.id]);
+    if (!lead || !canActOnLead(req.actor, lead)) { await conn.rollback(); conn.release(); return res.status(404).json({ success: false, message: 'Lead not found.' }); }
+    if (lead.status === 'CONVERTED') { await conn.rollback(); conn.release(); return res.status(409).json({ success: false, message: 'Lead already converted.' }); }
+
     const [acc] = await conn.query(
       `INSERT INTO accounts (name, owner_id, status, portal_tier) VALUES (?, ?, 'PROSPECT', 'NONE')`,
       [lead.company_name || `${lead.first_name || 'New'} account`, req.actor.userId]
