@@ -63,13 +63,20 @@ export async function provisionEmployee(req, res, next) {
   }
 }
 
-// GET /api/hr/employees — scope-filtered, field-filtered list.
+// GET /api/hr/employees — scope-filtered, field-filtered list. Joins the login
+// account so the console can drive role-assignment / password-reset (both keyed
+// on the hr_accounts id, not the employee id).
 export async function listEmployees(req, res, next) {
   try {
-    const { sql, params } = scopeToSql(req.scope);
+    const { sql, params } = scopeToSql(req.scope, { idCol: 'e.id', mgrCol: 'e.manager_id' });
     const [rows] = await pool.query(
-      `SELECT id, name, role, work_email, employee_code, manager_id, hr_status, monthly_salary, engagement_state
-         FROM employees WHERE ${sql} ORDER BY id ASC`,
+      `SELECT e.id, e.name, e.role, e.work_email, e.employee_code, e.manager_id, e.hr_status,
+              e.monthly_salary, e.engagement_state,
+              a.id AS account_id, a.status AS account_status, ar.name AS account_role
+         FROM employees e
+         LEFT JOIN hr_accounts a ON a.employee_id = e.id
+         LEFT JOIN roles ar ON ar.id = a.role_id
+        WHERE ${sql} ORDER BY e.id ASC`,
       params
     );
     const data = rows.map((r) => filterFields(r, req.actor));

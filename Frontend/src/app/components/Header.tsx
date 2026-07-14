@@ -2,10 +2,19 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { Button } from "./ui/button";
-import { Phone, Mail, Menu, X, LayoutDashboard } from "lucide-react";
+import { Phone, Mail, Menu, X, LayoutDashboard, ChevronDown, IdCard, Building2, Users } from "lucide-react";
+
+// Staff/client consoles reachable from the marketing site.
+const CONSOLES = [
+  { to: "/admin", label: "Operations (Admin)", icon: LayoutDashboard },
+  { to: "/hr", label: "Employee Management", icon: IdCard },
+  { to: "/crm", label: "CRM", icon: Building2 },
+  { to: "/portal", label: "Client Portal", icon: Users },
+];
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [consolesOpen, setConsolesOpen] = useState(false);
 
   const handleCall = () => {
     window.location.href = "tel:+918261861224";
@@ -36,9 +45,28 @@ export function Header() {
             <a href="#services" className="text-foreground hover:text-primary transition-colors">Services</a>
             <a href="#team" className="text-foreground hover:text-primary transition-colors">Team</a>
             <a href="#contact" className="text-foreground hover:text-primary transition-colors">Contact</a>
-            <Link to="/admin" className="flex items-center gap-1 text-foreground hover:text-primary transition-colors">
-              <LayoutDashboard className="h-4 w-4" /> Admin
-            </Link>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setConsolesOpen((o) => !o)}
+                onBlur={() => setTimeout(() => setConsolesOpen(false), 150)}
+                className="flex items-center gap-1 text-foreground hover:text-primary transition-colors"
+              >
+                <LayoutDashboard className="h-4 w-4" /> Consoles <ChevronDown className="h-3 w-3" />
+              </button>
+              {consolesOpen && (
+                <div className="absolute right-0 mt-2 w-56 rounded-md border bg-white shadow-lg py-1 z-50">
+                  {CONSOLES.map((c) => {
+                    const Icon = c.icon;
+                    return (
+                      <Link key={c.to} to={c.to} className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted">
+                        <Icon className="h-4 w-4 text-muted-foreground" /> {c.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </nav>
 
           {/* Contact Buttons - Desktop */}
@@ -103,13 +131,22 @@ export function Header() {
               >
                 Contact
               </a>
-              <Link
-                to="/admin"
-                className="flex items-center gap-2 text-foreground hover:text-primary transition-colors py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <LayoutDashboard className="h-4 w-4" /> Admin Console
-              </Link>
+              <div className="pt-2 border-t">
+                <p className="text-xs uppercase text-muted-foreground py-2">Consoles</p>
+                {CONSOLES.map((c) => {
+                  const Icon = c.icon;
+                  return (
+                    <Link
+                      key={c.to}
+                      to={c.to}
+                      className="flex items-center gap-2 text-foreground hover:text-primary transition-colors py-2"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <Icon className="h-4 w-4" /> {c.label}
+                    </Link>
+                  );
+                })}
+              </div>
               <div className="flex flex-col space-y-2 pt-4">
                 <Button variant="outline" onClick={handleCall} className="flex items-center justify-center gap-2">
                   <Phone className="h-4 w-4" />

@@ -28,6 +28,13 @@ import { PortalTicketsPage } from "./portal/PortalTicketsPage";
 import { PortalInvoicesPage } from "./portal/PortalInvoicesPage";
 import { PortalConsentPage } from "./portal/PortalConsentPage";
 import { PortalUsersPage } from "./portal/PortalUsersPage";
+import { HrLoginPage } from "./hr/HrLoginPage";
+import { HrActivatePage } from "./hr/HrActivatePage";
+import { HrRequireAuth } from "./hr/HrRequireAuth";
+import { HrLayout } from "./hr/HrLayout";
+import { HrEmployeesPage } from "./hr/HrEmployeesPage";
+import { HrLeavePage } from "./hr/HrLeavePage";
+import { HrAuditPage } from "./hr/HrAuditPage";
 
 export default function App() {
   return (
@@ -43,6 +50,16 @@ export default function App() {
           <Route path="employees" element={<EmployeesPage />} />
           <Route path="financial" element={<FinancialPage />} />
           <Route path="clients" element={<ClientsPage />} />
+        </Route>
+
+        {/* Employee Management System (HR / EMS) — own login/session + RBAC */}
+        <Route path="/hr/login" element={<HrLoginPage />} />
+        <Route path="/hr/activate" element={<HrActivatePage />} />
+        <Route path="/hr" element={<HrRequireAuth><HrLayout /></HrRequireAuth>}>
+          <Route index element={<Navigate to="employees" replace />} />
+          <Route path="employees" element={<HrEmployeesPage />} />
+          <Route path="leave" element={<HrLeavePage />} />
+          <Route path="audit" element={<HrAuditPage />} />
         </Route>
 
         {/* CRM staff console — its own login/session (internal plane) */}
