@@ -5,6 +5,7 @@ import {
   scopeFilter, scopeToSql, stripInternalFields, PORTAL_HIDDEN_FIELDS,
 } from './rbac.js';
 import { signInternalToken, signExternalToken, verifyToken } from './token.js';
+import { scoreLead, isMql, isFreeEmail, MQL_THRESHOLD } from './scoring.js';
 
 let failures = 0;
 const check = (name, cond, extra = '') => {
@@ -62,6 +63,15 @@ const portalView = stripInternalFields(acct);
 check('portal view strips health_score', !('health_score' in portalView));
 check('portal view strips owner/AM/lost_reason', PORTAL_HIDDEN_FIELDS.every((f) => !(f in portalView)));
 check('portal view keeps allowed fields', portalView.name === 'Acme' && portalView.segment === 'ENTERPRISE');
+
+// --- Lead scoring (Section 8.1) ---
+check('score: fit + engagement adds up', scoreLead({ company_size_in_range: true, requested_demo: true }) === 50);
+check('score: free-email penalty applies', scoreLead({ company_size_in_range: true, free_email_domain: true }) === 5);
+check('score: capped at 100', scoreLead({ company_size_in_range: true, industry_in_target: true, is_decision_maker: true, requested_demo: true, visited_pricing: true, opened_3plus_emails: true }) === 100);
+check('score: floored at 0 (decay)', scoreLead({ free_email_domain: true, no_activity_30d: true }) === 0);
+check('MQL threshold: 65 qualifies', isMql(65) === true && MQL_THRESHOLD === 60);
+check('MQL threshold: 25 does not', isMql(25) === false);
+check('free-email detection', isFreeEmail('a@gmail.com') === true && isFreeEmail('a@acme.com') === false);
 
 console.log(failures === 0 ? '\n🎯 All CRM dual-plane checks passed.' : `\n❌ ${failures} CRM check(s) failed.`);
 process.exit(failures === 0 ? 0 : 1);

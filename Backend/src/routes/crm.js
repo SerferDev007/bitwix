@@ -12,6 +12,12 @@ import {
   createOpportunity, updateOpportunityStage, forecast,
   listTicketsInternal, resolveTicket, readAudit,
 } from '../controllers/crm/internalController.js';
+import {
+  createLead, listLeads, rescoreLead, updateLeadStatus, convertLead,
+} from '../controllers/crm/leadController.js';
+import {
+  createQuote, listQuotes, approveQuote, sendQuote, reviseQuote,
+} from '../controllers/crm/quoteController.js';
 
 const router = Router();
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { success: false, message: 'Too many login attempts.' } });
@@ -31,10 +37,25 @@ router.post('/portal-users', internalAuth('portal.user.invite'), provisionPortal
 router.post('/portal-users/:id/revoke', internalAuth('portal.user.revoke'), revokePortalUser);
 router.post('/portal-requests/:id/approve', internalAuth('portal.request.approve'), approvePortalRequest);
 
+// Leads
+router.get('/leads', internalAuth('lead.read'), listLeads);
+router.post('/leads', internalAuth('lead.read'), createLead);
+router.post('/leads/:id/score', internalAuth('lead.read'), rescoreLead);
+router.patch('/leads/:id/status', internalAuth('lead.read'), updateLeadStatus);
+router.post('/leads/:id/convert', internalAuth('lead.convert'), convertLead);
+
+// Opportunities
 router.get('/opportunities', internalAuth('opportunity.manage'), listOpportunities);
 router.post('/opportunities', internalAuth('opportunity.manage'), createOpportunity);
 router.patch('/opportunities/:id/stage', internalAuth('opportunity.manage'), updateOpportunityStage);
 router.get('/forecast', internalAuth('forecast.read'), forecast);
+
+// Quotes — discount approval is Sales-Manager-only (separation of duties)
+router.get('/quotes', internalAuth('quote.create'), listQuotes);
+router.post('/quotes', internalAuth('quote.create'), createQuote);
+router.post('/quotes/:id/approve', internalAuth('discount.approve'), approveQuote);
+router.post('/quotes/:id/send', internalAuth('quote.create'), sendQuote);
+router.post('/quotes/:id/revise', internalAuth('quote.create'), reviseQuote);
 
 router.get('/tickets', internalAuth('ticket.read'), listTicketsInternal);
 router.post('/tickets/:id/resolve', internalAuth('ticket.resolve'), resolveTicket);

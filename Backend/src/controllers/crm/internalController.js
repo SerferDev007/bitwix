@@ -171,6 +171,8 @@ export async function revokePortalUser(req, res, next) {
     if (!pu) return res.status(404).json({ success: false, message: 'Portal user not found.' });
     if (!(await accountInScope(req.actor, req.scope, pu.account_id))) return res.status(403).json({ success: false, message: 'Account outside your scope.' });
     await pool.query("UPDATE crm_portal_users SET status = 'REVOKED', token_version = token_version + 1 WHERE id = ?", [pu.id]);
+    // Kill any still-pending activation token so a revoked user can't re-activate.
+    await pool.query('UPDATE crm_invitations SET used_at = NOW() WHERE portal_user_id = ? AND used_at IS NULL', [pu.id]);
     await writeCrmAudit(pool, req, { action: 'PORTAL_ACCESS_REVOKED', entityType: 'portal_user', entityId: pu.id, accountId: pu.account_id });
     res.json({ success: true, message: 'Portal access revoked; sessions killed.' });
   } catch (err) { next(err); }

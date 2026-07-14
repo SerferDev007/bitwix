@@ -116,6 +116,49 @@ export async function ensureCrmSchema(conn) {
       FOREIGN KEY (account_id) REFERENCES accounts(id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`);
 
+  // --- Leads (pre-account: no account_id until conversion) ---
+  await conn.query(`
+    CREATE TABLE IF NOT EXISTS leads (
+      id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      email          VARCHAR(160) NOT NULL,
+      first_name     VARCHAR(80) NULL,
+      company_name   VARCHAR(160) NULL,
+      source         ENUM('WEB_FORM','CAMPAIGN','IMPORT','REFERRAL') NOT NULL DEFAULT 'WEB_FORM',
+      score          SMALLINT NOT NULL DEFAULT 0,
+      signals        JSON NULL,
+      status         ENUM('NEW','WORKING','MQL','SQL','CONVERTED','DISQUALIFIED') NOT NULL DEFAULT 'NEW',
+      owner_id       BIGINT UNSIGNED NULL,
+      reject_reason  VARCHAR(80) NULL,
+      converted_account_id BIGINT UNSIGNED NULL,
+      created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY uq_lead_email (email),           -- dedupe on email at ingestion
+      INDEX idx_lead_owner (owner_id, status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`);
+
+  // --- Quotes (money is versioned + frozen, never overwritten) ---
+  await conn.query(`
+    CREATE TABLE IF NOT EXISTS quotes (
+      id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      opportunity_id BIGINT UNSIGNED NOT NULL,
+      account_id     BIGINT UNSIGNED NOT NULL,          -- denormalized tenant col
+      version        SMALLINT NOT NULL DEFAULT 1,
+      line_items     JSON NOT NULL,                     -- frozen snapshot of products + prices
+      subtotal       DECIMAL(14,2) NOT NULL,
+      discount_pct   DECIMAL(5,2) NOT NULL DEFAULT 0,
+      total          DECIMAL(14,2) NOT NULL,
+      status         ENUM('DRAFT','PENDING_APPROVAL','APPROVED','SENT','ACCEPTED','REJECTED') NOT NULL DEFAULT 'DRAFT',
+      created_by     BIGINT UNSIGNED NOT NULL,
+      approved_by    BIGINT UNSIGNED NULL,              -- required when discount over threshold
+      sent_at        TIMESTAMP NULL,
+      created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY uq_quote_version (opportunity_id, version),
+      INDEX idx_quote_acc (account_id),
+      FOREIGN KEY (opportunity_id) REFERENCES opportunities(id),
+      FOREIGN KEY (account_id) REFERENCES accounts(id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`);
+
   // --- Support tickets (dual-plane: portal creates/reads own account; staff resolve) ---
   await conn.query(`
     CREATE TABLE IF NOT EXISTS tickets (
@@ -186,6 +229,75 @@ export async function ensureCrmSchema(conn) {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`);
 
   await seedBootstrapInternalAdmin(conn);
+  await seedDemoData(conn);
+}
+
+// Demo data so the CRM + client portal are clickable end-to-end. Only runs when
+// there are no accounts yet. The portal login is created ACTIVE with a known
+// password (skipping the invite flow) purely for demonstration.
+async function seedDemoData(conn) {
+  const [[{ c }]] = await conn.query('SELECT COUNT(*) AS c FROM accounts');
+  if (c > 0) return;
+  console.log('Seeding demo CRM data...');
+
+  const [[owner]] = await conn.query("SELECT id FROM crm_users WHERE role = 'SUPER_ADMIN' LIMIT 1");
+  const ownerId = owner?.id || null;
+
+  const [acc] = await conn.query(
+    `INSERT INTO accounts (name, domain, industry, segment, owner_id, portal_tier, status, health_score)
+     VALUES ('Acme Corp', 'acme.example', 'Manufacturing', 'ENTERPRISE', ?, 'FULL', 'ACTIVE', 72)`,
+    [ownerId]
+  );
+  const accountId = acc.insertId;
+  await conn.query(
+    `INSERT INTO accounts (name, domain, segment, owner_id, portal_tier, status)
+     VALUES ('Globex Ltd', 'globex.example', 'MID_MARKET', ?, 'BASIC', 'PROSPECT')`,
+    [ownerId]
+  );
+
+  const [contact] = await conn.query(
+    `INSERT INTO contacts (account_id, first_name, last_name, email, title, is_primary)
+     VALUES (?, 'Riya', 'Sharma', 'riya@acme.example', 'IT Director', TRUE)`,
+    [accountId]
+  );
+
+  // ACTIVE portal login (demo): riya@acme.example / PortalDemo-123
+  await conn.query(
+    `INSERT INTO crm_portal_users (contact_id, account_id, email, password_hash, role, status, invited_by)
+     VALUES (?, ?, 'riya@acme.example', ?, 'CLIENT_ADMIN', 'ACTIVE', ?)`,
+    [contact.insertId, accountId, hashPassword('PortalDemo-123'), ownerId]
+  );
+
+  // A couple of invoices for the Finance/Admin portal view.
+  await conn.query(
+    `INSERT INTO invoices (account_id, number, amount, currency, status, issued_at, due_date, paid_at) VALUES
+     (?, 'INV-2026-001', 120000, 'INR', 'PAID', '2026-05-01', '2026-05-15', '2026-05-12'),
+     (?, 'INV-2026-014', 96000, 'INR', 'SENT', '2026-07-01', '2026-07-15', NULL)`,
+    [accountId, accountId]
+  );
+
+  // Opportunities across stages (feeds the pipeline + forecast).
+  await conn.query(
+    `INSERT INTO opportunities (account_id, name, stage, amount, probability, expected_close, owner_id) VALUES
+     (?, 'Acme platform expansion', 'PROPOSAL', 450000, 50, '2026-09-30', ?),
+     (?, 'Acme support upgrade', 'NEGOTIATION', 180000, 75, '2026-08-31', ?)`,
+    [accountId, ownerId, accountId, ownerId]
+  );
+
+  // A couple of leads (scored).
+  await conn.query(
+    `INSERT INTO leads (email, first_name, company_name, source, score, status, owner_id) VALUES
+     ('cto@bigco.example', 'Sam', 'BigCo', 'WEB_FORM', 65, 'MQL', ?),
+     ('hello@smallbiz.example', 'Pat', 'SmallBiz', 'CAMPAIGN', 25, 'NEW', ?)`,
+    [ownerId, ownerId]
+  );
+
+  // Support ticket for the account (shows in staff + portal, tenant-isolated).
+  await conn.query(
+    `INSERT INTO tickets (account_id, contact_id, subject, priority, status, sla_due_at)
+     VALUES (?, ?, 'Cannot access reporting dashboard', 'HIGH', 'OPEN', DATE_ADD(NOW(), INTERVAL 24 HOUR))`,
+    [accountId, contact.insertId]
+  );
 }
 
 async function seedBootstrapInternalAdmin(conn) {

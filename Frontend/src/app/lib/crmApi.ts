@@ -82,4 +82,17 @@ export const crmApi = {
 
   tickets: () => req<Ticket[]>("/tickets"),
   resolveTicket: (id: number) => req(`/tickets/${id}/resolve`, { method: "POST" }),
+
+  leads: () => req<Lead[]>("/leads") as Promise<CrmResult<Lead[]> & { mqlThreshold?: number }>,
+  createLead: (b: { email: string; first_name?: string; company_name?: string; source?: string; signals?: Record<string, boolean> }) => req<{ id: number; score: number; status: string }>("/leads", { method: "POST", body: JSON.stringify(b) }),
+  setLeadStatus: (id: number, status: string, reason?: string) => req(`/leads/${id}/status`, { method: "PATCH", body: JSON.stringify({ status, reason }) }),
+  convertLead: (id: number, b: { amount?: number; expected_close?: string }) => req<{ accountId: number; opportunityId: number }>(`/leads/${id}/convert`, { method: "POST", body: JSON.stringify(b) }),
+
+  quotes: (opportunityId: number) => req<Quote[]>(`/quotes?opportunity_id=${opportunityId}`),
+  createQuote: (b: { opportunity_id: number; line_items: { name: string; qty: number; unit_price: number }[]; discount_pct: number }) => req<{ id: number; status: string; needsApproval: boolean }>("/quotes", { method: "POST", body: JSON.stringify(b) }),
+  approveQuote: (id: number) => req(`/quotes/${id}/approve`, { method: "POST" }),
+  sendQuote: (id: number) => req(`/quotes/${id}/send`, { method: "POST" }),
 };
+
+export interface Lead { id: number; email: string; first_name: string | null; company_name: string | null; source: string; score: number; status: string; owner_id: number | null; converted_account_id: number | null; created_at: string; }
+export interface Quote { id: number; opportunity_id: number; account_id: number; version: number; line_items: unknown; subtotal: string | number; discount_pct: string | number; total: string | number; status: string; approved_by: number | null; sent_at: string | null; created_by: number; }

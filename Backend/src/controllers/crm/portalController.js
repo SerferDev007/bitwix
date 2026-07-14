@@ -16,12 +16,21 @@ export async function portalLogin(req, res, next) {
     );
     const ok = verifyPassword(password || '', pu?.password_hash || null);
     if (!pu || !ok) {
-      if (pu) await pool.query('UPDATE crm_portal_users SET failed_attempts = failed_attempts + 1 WHERE id = ?', [pu.id]);
+      // Increment failures and lock the account for 30 min once it hits 5 —
+      // an account-level lockout the IP rate limiter alone can't provide.
+      if (pu) {
+        await pool.query(
+          'UPDATE crm_portal_users SET failed_attempts = failed_attempts + 1, ' +
+          'locked_until = IF(failed_attempts + 1 >= 5, DATE_ADD(NOW(), INTERVAL 30 MINUTE), locked_until) WHERE id = ?',
+          [pu.id]
+        );
+      }
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
+    if (pu.locked_until && new Date(pu.locked_until) > new Date()) return res.status(423).json({ success: false, message: 'Account locked. Try again later.' });
     if (pu.status !== 'ACTIVE') return res.status(403).json({ success: false, message: 'Access not active' });
     if (!['ACTIVE', 'PROSPECT'].includes(pu.account_status)) return res.status(403).json({ success: false, message: 'Account inactive' });
-    await pool.query('UPDATE crm_portal_users SET failed_attempts = 0, last_login_at = NOW() WHERE id = ?', [pu.id]);
+    await pool.query('UPDATE crm_portal_users SET failed_attempts = 0, locked_until = NULL, last_login_at = NOW() WHERE id = ?', [pu.id]);
     res.json({
       success: true,
       access_token: signExternalToken({ portalUserId: pu.id, accountId: pu.account_id, role: pu.role, tokenVersion: pu.token_version }),
@@ -34,16 +43,28 @@ export async function portalActivate(req, res, next) {
   const conn = await pool.getConnection();
   try {
     const { token, new_password } = req.body || {};
-    const [[inv]] = await conn.query(
-      'SELECT * FROM crm_invitations WHERE token_hash = ? AND used_at IS NULL AND expires_at > NOW()',
-      [sha256(token || '')]
-    );
-    if (!inv) { conn.release(); return res.status(400).json({ success: false, message: 'Invalid or expired activation link' }); }
+    if (!token) { conn.release(); return res.status(400).json({ success: false, message: 'Invalid or expired activation link' }); }
     try { enforcePasswordPolicy(new_password); } catch (e) { conn.release(); return res.status(422).json({ success: false, message: e.message }); }
 
     await conn.beginTransaction();
-    await conn.query("UPDATE crm_portal_users SET password_hash = ?, status = 'ACTIVE' WHERE id = ?", [hashPassword(new_password), inv.portal_user_id]);
+    // Lock the invitation row and consume it inside the transaction so two
+    // concurrent activations can't both pass the used_at check (atomic single-use).
+    const [[inv]] = await conn.query(
+      'SELECT * FROM crm_invitations WHERE token_hash = ? AND used_at IS NULL AND expires_at > NOW() FOR UPDATE',
+      [sha256(token)]
+    );
+    if (!inv) { await conn.rollback(); conn.release(); return res.status(400).json({ success: false, message: 'Invalid or expired activation link' }); }
     await conn.query('UPDATE crm_invitations SET used_at = NOW() WHERE id = ?', [inv.id]);
+
+    // Only a PENDING_ACTIVATION account may be activated. A REVOKED/SUSPENDED
+    // account must NOT be resurrected via a still-outstanding token — the
+    // affectedRows guard closes the revocation-bypass window.
+    const [r] = await conn.query(
+      "UPDATE crm_portal_users SET password_hash = ?, status = 'ACTIVE', token_version = token_version + 1 WHERE id = ? AND status = 'PENDING_ACTIVATION'",
+      [hashPassword(new_password), inv.portal_user_id]
+    );
+    if (r.affectedRows !== 1) { await conn.rollback(); conn.release(); return res.status(409).json({ success: false, message: 'This activation link can no longer be used.' }); }
+
     await conn.commit();
     conn.release();
     res.json({ success: true, message: 'Portal account activated.' });
@@ -121,13 +142,14 @@ export async function listInvoices(req, res, next) {
 // --- Consent (self-service, append-only) ---
 export async function getConsent(req, res, next) {
   try {
+    // Latest event per channel keyed on the monotonic PK (id), so two events in
+    // the same wall-clock second resolve deterministically to the true latest.
     const [rows] = await pool.query(
       `SELECT ce.channel, ce.action, ce.occurred_at
          FROM consent_events ce
-         JOIN (SELECT channel, MAX(occurred_at) AS mx FROM consent_events WHERE contact_id = ? GROUP BY channel) latest
-           ON latest.channel = ce.channel AND latest.mx = ce.occurred_at
-        WHERE ce.contact_id = ?`,
-      [req.actor.contactId, req.actor.contactId]
+         JOIN (SELECT channel, MAX(id) AS mx FROM consent_events WHERE contact_id = ? GROUP BY channel) latest
+           ON latest.mx = ce.id`,
+      [req.actor.contactId]
     );
     res.json({ success: true, data: rows });
   } catch (err) { next(err); }

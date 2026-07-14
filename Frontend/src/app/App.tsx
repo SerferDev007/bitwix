@@ -17,6 +17,8 @@ import { AccountDetailPage } from "./crm/AccountDetailPage";
 import { PipelinePage } from "./crm/PipelinePage";
 import { ForecastPage } from "./crm/ForecastPage";
 import { TicketsPage } from "./crm/TicketsPage";
+import { LeadsPage } from "./crm/LeadsPage";
+import { QuotesPage } from "./crm/QuotesPage";
 import { PortalLoginPage } from "./portal/PortalLoginPage";
 import { PortalActivatePage } from "./portal/PortalActivatePage";
 import { PortalRequireAuth } from "./portal/PortalRequireAuth";
@@ -49,7 +51,9 @@ export default function App() {
           <Route index element={<Navigate to="accounts" replace />} />
           <Route path="accounts" element={<AccountsPage />} />
           <Route path="accounts/:id" element={<AccountDetailPage />} />
+          <Route path="leads" element={<LeadsPage />} />
           <Route path="pipeline" element={<PipelinePage />} />
+          <Route path="quotes" element={<QuotesPage />} />
           <Route path="forecast" element={<ForecastPage />} />
           <Route path="tickets" element={<TicketsPage />} />
         </Route>

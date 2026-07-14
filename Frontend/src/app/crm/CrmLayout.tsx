@@ -1,10 +1,12 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
-import { Building2, Users2, GitBranch, TrendingUp, Ticket, LogOut, ArrowLeft } from "lucide-react";
+import { Building2, Users2, GitBranch, TrendingUp, Ticket, LogOut, ArrowLeft, Filter, FileSignature } from "lucide-react";
 import { crmApi } from "../lib/crmApi";
 
 const nav = [
   { to: "/crm/accounts", label: "Accounts", icon: Users2 },
+  { to: "/crm/leads", label: "Leads", icon: Filter },
   { to: "/crm/pipeline", label: "Pipeline", icon: GitBranch },
+  { to: "/crm/quotes", label: "Quotes", icon: FileSignature },
   { to: "/crm/forecast", label: "Forecast", icon: TrendingUp },
   { to: "/crm/tickets", label: "Tickets", icon: Ticket },
 ];
