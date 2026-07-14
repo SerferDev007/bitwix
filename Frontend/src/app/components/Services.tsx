@@ -1,125 +1,113 @@
-
-import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
-import { Monitor, Smartphone, Code, Palette, Database, Shield, ArrowRight, Phone, Mail } from "lucide-react";
-import { contentApi } from "../lib/api";
+import { Monitor, Smartphone, Layers, Bot, Network, Palette, LifeBuoy, Sparkles, ArrowRight, Phone } from "lucide-react";
 
-// Map icon names stored in the DB to lucide components.
-const iconMap: Record<string, typeof Monitor> = { Monitor, Smartphone, Code, Palette, Database, Shield };
-const colorPalette = ["bg-blue-500", "bg-green-500", "bg-purple-500", "bg-orange-500"];
-
-interface ServiceCard {
+interface Category {
   icon: typeof Monitor;
   title: string;
   description: string;
-  features: string[];
+  items: string[];
   color: string;
+  badge?: string;
 }
 
-// Shown immediately and used as a fallback if the backend is unavailable.
-const fallbackServices: ServiceCard[] = [
+// The full capability catalog, shown as tiles.
+const catalog: Category[] = [
   {
     icon: Monitor,
-    title: "Website Development",
-    description: "Create stunning, responsive websites that captivate your audience and drive business growth.",
-    features: ["Responsive Design", "E-commerce Solutions", "Content Management Systems", "SEO Optimization", "Performance Optimization", "Custom Web Applications"],
-    color: "bg-blue-500"
+    title: "Web Development",
+    description: "Fast, scalable, conversion-focused websites and web apps.",
+    color: "bg-blue-500",
+    items: ["Business & corporate sites", "Portfolio websites", "E-commerce", "Marketplace platforms", "SaaS applications", "CRM systems", "ERP systems", "Admin dashboards", "Landing pages", "Progressive Web Apps (PWA)"],
   },
   {
     icon: Smartphone,
-    title: "Android App Development",
-    description: "Build powerful Android applications that deliver exceptional user experiences and functionality.",
-    features: ["Native Android Apps", "Cross-Platform Solutions", "UI/UX Design", "API Integration", "App Store Deployment", "Maintenance & Support"],
-    color: "bg-green-500"
-  }
+    title: "Mobile App Development",
+    description: "Native and cross-platform apps for Android and iOS.",
+    color: "bg-green-500",
+    items: ["Android apps", "iOS apps", "Cross-platform (React Native / Flutter)", "Enterprise apps", "E-commerce apps", "Food delivery apps", "Healthcare apps", "Education apps", "Booking apps", "Social networking apps"],
+  },
+  {
+    icon: Layers,
+    title: "Custom Software Development",
+    description: "Tailored systems that run your entire operation.",
+    color: "bg-purple-500",
+    items: ["CRM development", "ERP development", "Inventory management", "HRMS", "Hospital management", "School / College ERP", "Billing software", "Accounting software", "POS software", "Warehouse management", "Manufacturing software"],
+  },
+  {
+    icon: Bot,
+    title: "AI & Automation",
+    description: "Chatbots, agents, and automation that save real hours.",
+    color: "bg-orange-500",
+    badge: "High demand",
+    items: ["AI chatbots", "Customer support bots", "WhatsApp AI bot", "AI voice assistant", "AI document processing", "AI email automation", "Resume screening", "AI knowledge base", "AI agents", "RAG applications", "LLM integration (OpenAI / Gemini / Claude)"],
+  },
+  {
+    icon: Network,
+    title: "API Development & Integration",
+    description: "Connect your systems, payments, and third-party services.",
+    color: "bg-cyan-500",
+    items: ["Payment gateways", "SMS gateway", "Email services", "WhatsApp API", "Google Maps API", "Firebase", "ERP integration", "CRM integration", "Shipping APIs", "GST APIs"],
+  },
+  {
+    icon: Palette,
+    title: "UI/UX Design",
+    description: "Interfaces users love — designed before we build.",
+    color: "bg-pink-500",
+    items: ["UI design", "UX design", "Wireframes", "Prototypes", "Dashboard design", "Mobile app design", "Landing page design", "Design systems"],
+  },
+  {
+    icon: LifeBuoy,
+    title: "Maintenance & Support",
+    description: "Keep your product secure, fast, and always improving.",
+    color: "bg-teal-500",
+    items: ["Bug fixes", "Security updates", "Server monitoring", "Backups", "Performance optimization", "Feature enhancements", "Technical support"],
+  },
 ];
 
 export function Services() {
-  const [services, setServices] = useState<ServiceCard[]>(fallbackServices);
-
-  // Load live services from the backend; keep the static content on any failure.
-  useEffect(() => {
-    contentApi.services()
-      .then((res) => {
-        if (res.success && res.data && res.data.length) {
-          setServices(res.data.map((s, i) => ({
-            icon: iconMap[s.icon || ""] || Monitor,
-            title: s.title,
-            description: s.description,
-            features: s.features || [],
-            color: colorPalette[i % colorPalette.length],
-          })));
-        }
-      })
-      .catch(() => { /* keep fallback */ });
-  }, []);
-
-  const handleCall = () => {
-    window.location.href = "tel:+918261861224";
-  };
-
-  const handleEmail = () => {
-    window.location.href = "mailto:support@bitwix.co.in?subject=Service Inquiry&body=Hello Bitwix Team,%0D%0A%0D%0AI am interested in your services. Please provide more information about:%0D%0A%0D%0A☐ Website Development%0D%0A☐ Android App Development%0D%0A%0D%0AThank you.";
-  };
-
-  // Send prospects to the site's own contact form (a tracked lead) rather than
-  // only an email client.
+  const handleCall = () => { window.location.href = "tel:+918261861224"; };
   const scrollToContact = () => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" });
-
-  const additionalServices = [
-    { icon: Code, title: "Custom Development", description: "Tailored solutions for unique business requirements" },
-    { icon: Palette, title: "UI/UX Design", description: "User-centered design that enhances user experience" },
-    { icon: Database, title: "Database Solutions", description: "Robust data management and storage solutions" },
-    { icon: Shield, title: "Security Services", description: "Comprehensive security implementation and auditing" }
-  ];
 
   return (
     <section id="services" className="scroll-mt-20 py-20 bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Our Services
-          </h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Our Services</h2>
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            We specialize in two core areas that drive digital transformation for businesses 
-            of all sizes. From concept to deployment, we deliver solutions that make a difference.
+            From websites and mobile apps to custom software, AI automation, integrations, and
+            ongoing support — everything you need to build and run your digital product.
           </p>
         </div>
 
-        {/* Main Services */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
-          {services.map((service, index) => {
-            const Icon = service.icon;
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {catalog.map((cat) => {
+            const Icon = cat.icon;
             return (
-              <Card key={index} className="hover:shadow-xl transition-shadow border-2 hover:border-primary/20">
+              <Card key={cat.title} className="flex flex-col hover:shadow-xl transition-shadow border-2 hover:border-primary/20">
                 <CardHeader>
                   <div className="flex items-center gap-4">
-                    <div className={`${service.color} w-12 h-12 rounded-lg flex items-center justify-center`}>
+                    <div className={`${cat.color} w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0`}>
                       <Icon className="h-6 w-6 text-white" />
                     </div>
-                    <CardTitle className="text-xl">{service.title}</CardTitle>
+                    <div>
+                      <CardTitle className="text-lg leading-tight">{cat.title}</CardTitle>
+                      {cat.badge && (
+                        <span className="inline-flex items-center gap-1 mt-1 text-[11px] font-medium text-orange-600">
+                          <Sparkles className="h-3 w-3" /> {cat.badge}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground mb-6">{service.description}</p>
-                  <div className="space-y-2 mb-6">
-                    {service.features.map((feature, featureIndex) => (
-                      <div key={featureIndex} className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-primary rounded-full"></div>
-                        <span className="text-sm">{feature}</span>
-                      </div>
+                <CardContent className="flex-1 flex flex-col">
+                  <p className="text-sm text-muted-foreground mb-4">{cat.description}</p>
+                  <div className="flex flex-wrap gap-2 mt-auto">
+                    {cat.items.map((item) => (
+                      <span key={item} className="bg-secondary text-secondary-foreground/90 rounded-md px-2 py-1 text-xs">
+                        {item}
+                      </span>
                     ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button onClick={handleCall} className="flex items-center gap-2">
-                      <Phone className="h-4 w-4" />
-                      Discuss Project
-                    </Button>
-                    <Button variant="outline" onClick={scrollToContact} className="flex items-center gap-2">
-                      <Mail className="h-4 w-4" />
-                      Get Quote
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -127,34 +115,18 @@ export function Services() {
           })}
         </div>
 
-        {/* Additional Services */}
-        <div className="bg-secondary/10 rounded-lg p-8 md:p-12">
-          <div className="text-center mb-8">
-            <h3 className="text-2xl font-bold text-foreground mb-4">Additional Services</h3>
-            <p className="text-muted-foreground">
-              Beyond our core offerings, we provide comprehensive technology solutions to support your business growth.
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {additionalServices.map((service, index) => {
-              const Icon = service.icon;
-              return (
-                <div key={index} className="text-center">
-                  <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                    <Icon className="h-8 w-8 text-primary" />
-                  </div>
-                  <h4 className="font-semibold mb-2">{service.title}</h4>
-                  <p className="text-sm text-muted-foreground">{service.description}</p>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="text-center">
-            <Button size="lg" onClick={scrollToContact} className="flex items-center gap-2 mx-auto">
-              Let's Discuss Your Project
-              <ArrowRight className="h-5 w-5" />
+        {/* CTA */}
+        <div className="mt-14 bg-secondary/10 rounded-lg p-8 md:p-12 text-center">
+          <h3 className="text-2xl font-bold text-foreground mb-3">Not sure where to start?</h3>
+          <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
+            Tell us what you're building and we'll recommend the right approach, stack, and timeline.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button size="lg" onClick={scrollToContact} className="flex items-center gap-2">
+              Let's Discuss Your Project <ArrowRight className="h-5 w-5" />
+            </Button>
+            <Button variant="outline" size="lg" onClick={handleCall} className="flex items-center gap-2">
+              <Phone className="h-5 w-5" /> Call Now
             </Button>
           </div>
         </div>

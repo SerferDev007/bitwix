@@ -62,31 +62,11 @@ export function Footer() {
           <div>
             <h3 className="font-semibold mb-4">Our Services</h3>
             <ul className="space-y-2 text-primary-foreground/80">
-              <li>
-                <a href="#services" className="hover:text-primary-foreground transition-colors">
-                  Website Development
-                </a>
-              </li>
-              <li>
-                <a href="#services" className="hover:text-primary-foreground transition-colors">
-                  Android App Development
-                </a>
-              </li>
-              <li>
-                <a href="#services" className="hover:text-primary-foreground transition-colors">
-                  Custom Development
-                </a>
-              </li>
-              <li>
-                <a href="#services" className="hover:text-primary-foreground transition-colors">
-                  UI/UX Design
-                </a>
-              </li>
-              <li>
-                <a href="#services" className="hover:text-primary-foreground transition-colors">
-                  Database Solutions
-                </a>
-              </li>
+              {["Web Development", "Mobile App Development", "Custom Software", "AI & Automation", "API & Integrations"].map((s) => (
+                <li key={s}>
+                  <a href="#services" className="hover:text-primary-foreground transition-colors">{s}</a>
+                </li>
+              ))}
             </ul>
           </div>
 
