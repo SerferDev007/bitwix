@@ -2,8 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import apiRoutes from './routes/index.js';
-import { assertDbConnection } from './config/db.js';
+import { pool, assertDbConnection } from './config/db.js';
 import { reconcileLedger } from './fms/reconcile.js';
+import { ensureHrSchema } from './hr/schema.js';
+import { ensureCrmSchema } from './crm/schema.js';
+import { ensureFmsSchema } from './fms/schema.js';
 
 dotenv.config();
 
@@ -78,6 +81,26 @@ async function connectWithRetry(attempts = Number(process.env.DB_CONNECT_RETRIES
   }
 }
 
+// Apply idempotent schema migrations on every boot (CREATE IF NOT EXISTS,
+// addColumnIfMissing, INSERT IGNORE config — NO destructive seeds), so deploying
+// code that reads a new column never 500s waiting for a manual RUN_DB_INIT.
+// Skipped on a truly fresh DB (RUN_DB_INIT handles the full first-time setup).
+async function migrateSchema() {
+  const conn = await pool.getConnection();
+  try {
+    const [[t]] = await conn.query(
+      "SELECT COUNT(*) AS c FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'employees'"
+    );
+    if (!t.c) return; // no base tables yet — RUN_DB_INIT does the full setup
+    await ensureHrSchema(conn);
+    await ensureCrmSchema(conn);
+    await ensureFmsSchema(conn);
+    console.log('✅ Schema migrations applied.');
+  } finally {
+    conn.release();
+  }
+}
+
 // Periodically re-drive any operational fact whose ledger post was dropped, so
 // the best-effort posts are eventually consistent without manual intervention.
 // Interval (seconds) from RECONCILE_INTERVAL_SEC; defaults to 600s in production,
@@ -142,6 +165,12 @@ async function start() {
   } catch (err) {
     console.error('❌ Could not connect to MySQL:', err.code || err.message);
     console.error('   Check the DB_* settings and that the database is reachable.');
+  }
+
+  // Auto-apply pending schema migrations unless a full init already ran this boot.
+  if (process.env.RUN_DB_INIT !== 'true') {
+    try { await migrateSchema(); }
+    catch (err) { console.error('⚠️  Schema migration failed:', err.stack || err.message); }
   }
 
   startReconcileScheduler();
