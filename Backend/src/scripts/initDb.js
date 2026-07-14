@@ -358,6 +358,28 @@ export async function initializeDatabase() {
   console.log('Setting up FMS (ledger) schema...');
   await ensureFmsSchema(conn);
 
+  // One-off cleanup: remove the OR demo employees (Ava/Ben/Cara/Dev/Ella/Farin)
+  // that were seeded before the clean-system change. Guarded, FK-safe, and only
+  // touches demo rows that were never turned into HR login accounts — real
+  // provisioned employees are left untouched.
+  if (process.env.PURGE_DEMO_EMPLOYEES === 'true') {
+    const demoNames = ['Ava Sharma', 'Ben Torres', 'Cara Lin', 'Dev Patel', 'Ella Novak', 'Farin Rao'];
+    const [rows] = await conn.query(
+      `SELECT e.id FROM employees e LEFT JOIN hr_accounts a ON a.employee_id = e.id
+        WHERE e.name IN (${demoNames.map(() => '?').join(',')}) AND a.id IS NULL`,
+      demoNames
+    );
+    const ids = rows.map((r) => r.id);
+    if (ids.length) {
+      const inC = ids.map(() => '?').join(',');
+      await conn.query(`DELETE FROM payroll_lines WHERE employee_id IN (${inC})`, ids);
+      await conn.query(`DELETE FROM leave_requests WHERE employee_id IN (${inC})`, ids);
+      await conn.query(`DELETE FROM leave_balances WHERE employee_id IN (${inC})`, ids);
+      await conn.query(`DELETE FROM employees WHERE id IN (${inC})`, ids);
+      console.log(`Purged ${ids.length} demo employee(s).`);
+    }
+  }
+
   await conn.end();
   console.log('\n✅ Database initialized successfully.');
 }
