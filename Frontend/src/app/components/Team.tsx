@@ -15,13 +15,22 @@ interface Member {
   contact: { phone: string; email: string };
 }
 
+// Studio photos bundled with the site (files live in Frontend/public/team/ and
+// are served from the site root). Used when the backend has no image_url for a
+// member, so a photo shows whether the card comes from the API or the fallback.
+const LOCAL_PHOTOS: Record<string, string> = {
+  "amruta shejul": "/team/amruta-shejul.jpg",
+};
+const photoFor = (name: string, imageUrl?: string | null) =>
+  imageUrl || LOCAL_PHOTOS[name.trim().toLowerCase()] || "";
+
 // Rendered immediately and used as a fallback if the backend is unavailable.
 const fallbackTeam: Member[] = [
   {
     name: "Amruta Shejul",
     role: "Managing Director & Founder",
     description: "Co-founder and Managing Director of Bitwix Technologies, driving the company vision, strategy, and growth. Leads operations and client partnerships to deliver reliable digital solutions.",
-    image: "",
+    image: photoFor("Amruta Shejul"),
     skills: ["Business Strategy", "Leadership", "Operations", "Client Partnerships"],
     contact: { phone: "+91-8261861224", email: "support@bitwix.co.in" }
   },
@@ -47,7 +56,7 @@ export function Team() {
             name: m.name,
             role: m.role,
             description: m.description || "",
-            image: m.image_url || "",
+            image: photoFor(m.name, m.image_url),
             skills: m.skills || [],
             contact: { phone: m.phone || "+91-8261861224", email: m.email || "support@bitwix.co.in" },
           })));
