@@ -20,6 +20,7 @@ interface Member {
 // member, so a photo shows whether the card comes from the API or the fallback.
 const LOCAL_PHOTOS: Record<string, string> = {
   "amruta shejul": "/team/amruta-shejul.jpg",
+  "sarita palakudetwar": "/team/sarita-palakudetwar.jpg",
 };
 const photoFor = (name: string, imageUrl?: string | null) =>
   imageUrl || LOCAL_PHOTOS[name.trim().toLowerCase()] || "";
@@ -38,7 +39,7 @@ const fallbackTeam: Member[] = [
     name: "Sarita Palakudetwar",
     role: "CEO & Co-Founder",
     description: "Chief Executive Officer and Co-Founder of Bitwix Technologies, setting the strategic direction and driving the company growth, partnerships, and client success.",
-    image: "",
+    image: photoFor("Sarita Palakudetwar"),
     skills: ["Leadership", "Strategy", "Business Development", "Client Success"],
     contact: { phone: "+91-8261861224", email: "support@bitwix.co.in" }
   }

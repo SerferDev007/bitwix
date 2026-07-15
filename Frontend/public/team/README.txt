@@ -2,7 +2,8 @@ Team photos served from the site root (Vite copies Frontend/public/ into dist/).
 
 Drop the file here with EXACTLY this name so the website picks it up:
 
-  amruta-shejul.jpg        ->  shown on Amruta Shejul's team card
+  amruta-shejul.jpg         ->  shown on Amruta Shejul's team card
+  sarita-palakudetwar.jpg   ->  shown on Sarita Palakudetwar's team card
 
 The component references it as "/team/amruta-shejul.jpg" (see
 src/app/components/Team.tsx, LOCAL_PHOTOS). If the file is missing the card
