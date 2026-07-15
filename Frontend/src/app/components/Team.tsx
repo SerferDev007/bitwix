@@ -2,8 +2,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
-import { Phone, Mail, User } from "lucide-react";
-import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { Phone, Mail } from "lucide-react";
 import { contentApi } from "../lib/api";
 
 interface Member {
@@ -24,6 +23,28 @@ const LOCAL_PHOTOS: Record<string, string> = {
 };
 const photoFor = (name: string, imageUrl?: string | null) =>
   imageUrl || LOCAL_PHOTOS[name.trim().toLowerCase()] || "";
+
+const initialsOf = (name: string) =>
+  name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
+
+// Shows the photo when it exists and loads; otherwise (no photo, or a missing /
+// broken file) falls back to a clean initials avatar rather than a broken image.
+function MemberPhoto({ name, image }: { name: string; image: string }) {
+  const [failed, setFailed] = useState(false);
+  if (!image || failed) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
+        <span className="text-5xl md:text-6xl font-bold text-primary/70">{initialsOf(name)}</span>
+      </div>
+    );
+  }
+  return (
+    <>
+      <img src={image} alt={name} className="w-full h-full object-cover" onError={() => setFailed(true)} />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+    </>
+  );
+}
 
 // Rendered immediately and used as a fallback if the backend is unavailable.
 const fallbackTeam: Member[] = [
@@ -96,24 +117,9 @@ export function Team() {
             <Card key={index} className="overflow-hidden hover:shadow-xl transition-shadow">
               <CardContent className="p-0">
                 <div className="grid grid-cols-1 md:grid-cols-2">
-                  {/* Image Section — photo if set, otherwise an initials avatar */}
+                  {/* Image Section — photo if it loads, otherwise an initials avatar */}
                   <div className="relative h-64 md:h-full min-h-[16rem]">
-                    {member.image ? (
-                      <>
-                        <ImageWithFallback
-                          src={member.image}
-                          alt={member.name}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-                      </>
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
-                        <span className="text-5xl md:text-6xl font-bold text-primary/70">
-                          {member.name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("")}
-                        </span>
-                      </div>
-                    )}
+                    <MemberPhoto name={member.name} image={member.image} />
                   </div>
 
                   {/* Content Section */}
