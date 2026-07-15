@@ -173,6 +173,23 @@ async function start() {
     catch (err) { console.error('⚠️  Schema migration failed:', err.stack || err.message); }
   }
 
+  // One-off, flag-guarded test-data hooks (set the flag, deploy, then unset).
+  if (process.env.PURGE_HR_DEMO === 'true') {
+    try {
+      const { purgeHrDemoUsers } = await import('./scripts/seedHrDemoUsers.js');
+      await purgeHrDemoUsers(pool);
+      console.log('🧹 PURGE_HR_DEMO=true — dummy HR users removed.');
+    } catch (err) { console.error('⚠️  PURGE_HR_DEMO failed:', err.message); }
+  }
+  if (process.env.SEED_HR_DEMO === 'true') {
+    try {
+      const { seedHrDemoUsers } = await import('./scripts/seedHrDemoUsers.js');
+      const rows = await seedHrDemoUsers(pool);
+      console.log('👤 SEED_HR_DEMO=true — dummy HR users ready:');
+      for (const r of rows) console.log(`   ${r.role.padEnd(10)} ${r.email.padEnd(26)} ${r.password}`);
+    } catch (err) { console.error('⚠️  SEED_HR_DEMO failed:', err.message); }
+  }
+
   startReconcileScheduler();
 }
 
