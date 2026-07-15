@@ -39,6 +39,12 @@ function shell(title: string, body: string) {
   .right { text-align:right; }
   .sign { margin-top:44px; }
   .muted { color:#777; font-size:11px; margin-top:28px; }
+  .sec { font-size:15px; margin:22px 0 8px; border-bottom:1px solid #ddd; padding-bottom:4px; }
+  .clause { margin:12px 0; }
+  .clause h3 { font-size:13.5px; margin:0 0 4px; }
+  ul { margin:6px 0 6px 18px; } li { margin:2px 0; }
+  .accept { margin-top:32px; border-top:1px dashed #999; padding-top:16px; }
+  .pagebreak { page-break-before: always; }
   @media print { .bar { display:none; } body { padding:0; } }
 </style></head><body>
 <div class="bar"><button onclick="window.print()">Download / Print PDF</button></div>
@@ -59,23 +65,97 @@ function openHtml(html: string): { ok: boolean; message?: string } {
   return { ok: true };
 }
 
+// Derive a standard Indian CTC breakdown from the monthly cost-to-company, so
+// the offer's Annexure A reconciles to the CTC (Basic 46%, HRA 40% of basic,
+// Employer PF 12% of the ₹15,000 statutory wage ceiling, Special = balance).
+function compStructure(monthlyCtc: number) {
+  const basic = Math.round(monthlyCtc * 0.46);
+  const employerPf = monthlyCtc > 0 ? Math.round(Math.min(basic, 15000) * 0.12) : 0;
+  const hra = Math.round(basic * 0.4);
+  const special = Math.max(0, monthlyCtc - basic - hra - employerPf);
+  const employeePf = employerPf;
+  const profTax = monthlyCtc > 0 ? 200 : 0;
+  const grossMonthly = monthlyCtc - employerPf;
+  const netBeforeTds = grossMonthly - employeePf - profTax;
+  return { basic, hra, special, employerPf, employeePf, profTax, grossMonthly, netBeforeTds };
+}
+
 function offer(e: Employee) {
-  const annual = Number(e.monthly_salary || 0) * 12;
+  const monthlyCtc = Number(e.monthly_salary || 0);
+  const annualCtc = monthlyCtc * 12;
+  const hasSalary = monthlyCtc > 0;
+  const c = compStructure(monthlyCtc);
+  const first = esc((e.name || "").split(" ")[0] || e.name);
+
+  const annexure = hasSalary ? `
+    <div class="pagebreak"></div>
+    <h1>Annexure A &mdash; Compensation Structure</h1>
+    <p>Annual CTC: <strong>${inr(annualCtc)}</strong> (fixed).</p>
+    <table>
+      <tr><th>Component</th><th class="right">Annual (₹)</th><th class="right">Monthly (₹)</th></tr>
+      <tr><td>Basic Salary</td><td class="right">${inr(c.basic * 12)}</td><td class="right">${inr(c.basic)}</td></tr>
+      <tr><td>House Rent Allowance</td><td class="right">${inr(c.hra * 12)}</td><td class="right">${inr(c.hra)}</td></tr>
+      <tr><td>Special Allowance</td><td class="right">${inr(c.special * 12)}</td><td class="right">${inr(c.special)}</td></tr>
+      <tr><td>Employer Provident Fund</td><td class="right">${inr(c.employerPf * 12)}</td><td class="right">${inr(c.employerPf)}</td></tr>
+      <tr><th>Total Cost to Company (CTC)</th><th class="right">${inr(annualCtc)}</th><th class="right">${inr(monthlyCtc)}</th></tr>
+    </table>
+    <table>
+      <tr><th>Statutory Deductions (Employee)</th><th class="right">Monthly (₹)</th></tr>
+      <tr><td>Employee Provident Fund</td><td class="right">${inr(c.employeePf)}</td></tr>
+      <tr><td>Professional Tax</td><td class="right">${inr(c.profTax)}</td></tr>
+    </table>
+    <table>
+      <tr><th>Estimated Monthly Take-Home (before income tax)</th><th class="right">Amount (₹)</th></tr>
+      <tr><td>Gross Monthly Salary</td><td class="right">${inr(c.grossMonthly)}</td></tr>
+      <tr><td>Less: Employee PF</td><td class="right">${inr(c.employeePf)}</td></tr>
+      <tr><td>Less: Professional Tax</td><td class="right">${inr(c.profTax)}</td></tr>
+      <tr><th>Estimated Net Monthly (before TDS)</th><th class="right">${inr(c.netBeforeTds)}</th></tr>
+    </table>
+    <p class="muted">Income tax (TDS) is deducted as per applicable laws. Employer PF is 12% of the statutory PF wage ceiling. Monthly figures may vary slightly due to statutory adjustments or rounding.</p>` : "";
+
   return shell(`Offer Letter - ${e.name}`, `
     <div class="row"><span>Date: ${today()}</span><span>Ref: BWX/OFR/${esc(e.employee_code || e.id)}</span></div>
-    <h1>Offer of Employment</h1>
-    <p>Dear ${esc(e.name)},</p>
-    <p>We are pleased to offer you the position of <strong>${esc(e.role || "—")}</strong>${e.department ? ` in the <strong>${esc(e.department)}</strong> department` : ""} at ${COMPANY.name}. This letter sets out the principal terms of your employment.</p>
+    <p><strong>${esc(e.name)}</strong></p>
+    <p><strong>Subject: Offer of Employment &mdash; ${esc(e.role || "—")}</strong></p>
+    <p>Dear ${first},</p>
+    <p>We are pleased to offer you employment with ${COMPANY.name} (the &ldquo;Company&rdquo;) in the position of <strong>${esc(e.role || "—")}</strong>${e.department ? ` in the ${esc(e.department)} department` : ""}, subject to the terms and conditions set out in this letter.</p>
+
+    <h2 class="sec">Position Details</h2>
     <table>
       <tr><th>Position</th><td>${esc(e.role || "—")}</td></tr>
       ${e.department ? `<tr><th>Department</th><td>${esc(e.department)}</td></tr>` : ""}
+      <tr><th>Employee Code</th><td>${esc(e.employee_code || "—")}</td></tr>
+      <tr><th>Probation</th><td>3 months</td></tr>
       <tr><th>Date of Joining</th><td>${fmtDate(e.date_of_joining)}</td></tr>
       <tr><th>Work Email</th><td>${esc(e.work_email || "—")}</td></tr>
-      ${e.monthly_salary != null ? `<tr><th>Annual CTC</th><td>${inr(annual)}</td></tr><tr><th>Monthly Gross</th><td>${inr(e.monthly_salary)}</td></tr>` : ""}
+      ${hasSalary ? `<tr><th>Annual Cost to Company (CTC)</th><td>${inr(annualCtc)} (fixed)</td></tr>` : ""}
     </table>
-    <p>Your employment will be governed by the company's policies as amended from time to time. We look forward to your contributions and wish you a rewarding career with us.</p>
-    <div class="sign"><p>Sincerely,</p><p><strong>Human Resources</strong><br>${COMPANY.name}</p></div>
-    <p class="muted">This is a system-generated document and does not require a physical signature.</p>`);
+
+    <div class="clause"><h3>1. Commencement &amp; Probation</h3><p>Your employment commences on <strong>${fmtDate(e.date_of_joining)}</strong>. You will initially be on probation for three (3) months, during which your performance and suitability will be assessed. On satisfactory completion, your employment will be confirmed in writing.</p></div>
+    <div class="clause"><h3>2. Compensation</h3><p>Your Annual Cost to Company is <strong>${hasSalary ? inr(annualCtc) : "as discussed"}</strong>. The detailed structure is set out in Annexure A. Statutory deductions (Provident Fund, Professional Tax, and Income Tax/TDS) apply as per applicable law.</p></div>
+    <div class="clause"><h3>3. Working Hours</h3><p>Standard working hours are 9 hours per day across a 5-day work week (Monday&ndash;Friday). The Company may modify shifts or work arrangements based on operational requirements.</p></div>
+    <div class="clause"><h3>4. Leave</h3><p>You will be entitled to Casual, Sick, and Earned leave in accordance with Company policy, subject to managerial approval and business requirements.</p></div>
+    <div class="clause"><h3>5. Notice Period</h3><p>During probation, either party may terminate on fifteen (15) days&rsquo; written notice. After confirmation, the notice period is sixty (60) days. The Company may relieve you earlier by adjusting salary in lieu of the unserved notice.</p></div>
+    <div class="clause"><h3>6. Confidentiality &amp; Intellectual Property</h3><p>You shall maintain strict confidentiality of all Company and client information during and after employment. All work products, inventions, and intellectual property created during employment are the exclusive property of the Company.</p></div>
+    <div class="clause"><h3>7. Conflict of Interest &amp; Non-Solicitation</h3><p>You shall not engage in any outside activity that conflicts with the Company&rsquo;s interests without prior written approval, and shall not solicit Company employees or clients for a period of twelve (12) months following separation.</p></div>
+    <div class="clause"><h3>8. Background Verification</h3><p>This offer is conditional upon successful verification of your qualifications, employment history, and identity. Providing false or misleading information may result in withdrawal of this offer or termination of employment.</p></div>
+    <div class="clause"><h3>9. Governing Law &amp; Offer Validity</h3><p>This offer is governed by the laws of India. It is valid for seven (7) days from the date of issuance, after which the Company reserves the right to withdraw or modify it.</p></div>
+
+    <div class="clause"><h3>Joining Documentation</h3><p>At the time of joining, please submit: Aadhaar &amp; PAN copies; this signed offer; relieving letter / resignation acceptance from your previous employer; last 3 payslips or salary proof; bank account details; two passport-size photographs; address proof; and educational marksheets &amp; certificates (X, XII, Graduation, Post-Graduation).</p></div>
+
+    <div class="sign">
+      <p>We look forward to welcoming you to ${COMPANY.short} and wish you a successful career with us.</p>
+      <p>Yours sincerely,</p>
+      <p><strong>Human Resources</strong><br>${COMPANY.name}</p>
+    </div>
+
+    <div class="accept">
+      <p><strong>Employee Acceptance</strong></p>
+      <p>I, ${esc(e.name)}, accept the above offer and agree to abide by the terms and conditions stated herein.</p>
+      <p>Signature: ____________________ &nbsp;&nbsp;&nbsp; Date: ____________________</p>
+    </div>
+    ${annexure}
+    <p class="muted">This is a system-generated document.</p>`);
 }
 
 function joining(e: Employee) {
