@@ -103,6 +103,26 @@ export interface Payslip {
   run_id: number; label: string; status: string; je_ref: string | null;
   gross: string | number; tax: string | number; net: string | number; cost_center: string;
 }
+// Company document settings — drives configurable offer-letter terms + signatory.
+export interface HrSettings {
+  signatory_name: string | null;
+  signatory_designation: string | null;
+  probation_months: number;
+  notice_probation_days: number;
+  notice_confirmed_days: number;
+  work_location: string | null;
+  work_hours: string | null;
+  governing_city: string | null;
+  offer_validity_days: number;
+  company_address: string | null;
+  basic_pct: number;
+  hra_pct: number;
+  pf_rate_pct: number;
+  pf_wage_ceiling: number;
+  professional_tax: number;
+  gratuity_pct: number;
+  updated_at?: string;
+}
 
 // Mirrors ROLES in Backend/src/hr/rbac.js.
 export const HR_ROLES = ["SUPER_ADMIN", "HR_ADMIN", "HR_EXEC", "MANAGER", "EMPLOYEE"];
@@ -147,4 +167,7 @@ export const hrApi = {
   payrollRun: (id: number) => req<PayrollRun & { lines: PayrollLine[] }>(`/payroll/runs/${id}`),
   createPayrollRun: (label?: string) => req<{ id: number; status: string; employees: number; gross_total: string }>("/payroll/runs", { method: "POST", body: JSON.stringify({ label }) }),
   approvePayrollRun: (id: number) => req(`/payroll/runs/${id}/approve`, { method: "POST" }),
+
+  getSettings: () => req<HrSettings>("/settings"),
+  updateSettings: (b: Partial<HrSettings>) => req("/settings", { method: "PUT", body: JSON.stringify(b) }),
 };

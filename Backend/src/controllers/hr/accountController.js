@@ -226,6 +226,47 @@ export async function adminResetPassword(req, res, next) {
   }
 }
 
+// GET /api/hr/settings — company document settings (used to render offer letters).
+export async function getHrSettings(req, res, next) {
+  try {
+    const [[row]] = await pool.query('SELECT * FROM hr_settings WHERE id = 1');
+    res.json({ success: true, data: row || {} });
+  } catch (err) { next(err); }
+}
+
+// PUT /api/hr/settings — update company document settings (HR Admin / Super Admin).
+export async function updateHrSettings(req, res, next) {
+  try {
+    const b = req.body || {};
+    const num = (v, d) => (v != null && Number.isFinite(Number(v)) && Number(v) >= 0 ? Math.round(Number(v)) : d);
+    const dec = (v, d) => (v != null && Number.isFinite(Number(v)) && Number(v) >= 0 ? Math.round(Number(v) * 100) / 100 : d);
+    const str = (v) => (v == null || v === '' ? null : String(v).slice(0, 250));
+    await pool.query(
+      `INSERT INTO hr_settings
+         (id, signatory_name, signatory_designation, probation_months, notice_probation_days, notice_confirmed_days, work_location, work_hours, governing_city, offer_validity_days, company_address, basic_pct, hra_pct, pf_rate_pct, pf_wage_ceiling, professional_tax, gratuity_pct)
+       VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         signatory_name=VALUES(signatory_name), signatory_designation=VALUES(signatory_designation),
+         probation_months=VALUES(probation_months), notice_probation_days=VALUES(notice_probation_days),
+         notice_confirmed_days=VALUES(notice_confirmed_days), work_location=VALUES(work_location),
+         work_hours=VALUES(work_hours), governing_city=VALUES(governing_city),
+         offer_validity_days=VALUES(offer_validity_days), company_address=VALUES(company_address),
+         basic_pct=VALUES(basic_pct), hra_pct=VALUES(hra_pct), pf_rate_pct=VALUES(pf_rate_pct),
+         pf_wage_ceiling=VALUES(pf_wage_ceiling), professional_tax=VALUES(professional_tax),
+         gratuity_pct=VALUES(gratuity_pct)`,
+      [
+        str(b.signatory_name), str(b.signatory_designation), num(b.probation_months, 3),
+        num(b.notice_probation_days, 15), num(b.notice_confirmed_days, 60), str(b.work_location),
+        str(b.work_hours), str(b.governing_city), num(b.offer_validity_days, 7), str(b.company_address),
+        num(b.basic_pct, 46), num(b.hra_pct, 40), num(b.pf_rate_pct, 12), num(b.pf_wage_ceiling, 15000), num(b.professional_tax, 200),
+        dec(b.gratuity_pct, 4.81),
+      ]
+    );
+    await writeAudit(pool, { ...auditCtx(req), action: 'HR_SETTINGS_UPDATED', entityType: 'hr_settings', entityId: 1 });
+    res.json({ success: true, message: 'Settings saved.' });
+  } catch (err) { next(err); }
+}
+
 // GET /api/hr/audit — read the audit trail (audit.read).
 export async function readAudit(req, res, next) {
   try {

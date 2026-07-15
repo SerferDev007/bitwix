@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from "react";
-import { hrApi, HR_ROLES, type Employee, type Activation } from "../lib/hrApi";
+import { hrApi, HR_ROLES, type Employee, type Activation, type HrSettings } from "../lib/hrApi";
 import { openDocument, openPayslip } from "../lib/hrDocs";
 import { useHrAuth } from "./HrRequireAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -45,6 +45,7 @@ export function HrEmployeesPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [activation, setActivation] = useState<{ label: string; a: Activation } | null>(null);
   const [docsFor, setDocsFor] = useState<number | null>(null);
+  const [settings, setSettings] = useState<HrSettings | null>(null);
   const [editing, setEditing] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({ designation: "", department: "", date_of_joining: "", date_of_exit: "", monthly_salary: "" as string | number });
 
@@ -67,6 +68,7 @@ export function HrEmployeesPage() {
       .finally(() => setLoading(false));
   };
   useEffect(load, []);
+  useEffect(() => { hrApi.getSettings().then((r) => { if (r.success && r.data) setSettings(r.data); }).catch(() => {}); }, []);
 
   const provision = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,7 +142,7 @@ export function HrEmployeesPage() {
       if (!r.ok) setError(r.message || "Could not open payslip.");
       return;
     }
-    const r = openDocument(type, emp);
+    const r = openDocument(type, emp, settings);
     if (!r.ok) setError(r.message || "Could not generate document.");
   };
 

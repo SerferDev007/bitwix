@@ -180,6 +180,40 @@ export async function ensureHrSchema(conn) {
       FOREIGN KEY (employee_id) REFERENCES employees(id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`);
 
+  // --- Company document settings (single row) — drives the offer letter etc. ---
+  await conn.query(`
+    CREATE TABLE IF NOT EXISTS hr_settings (
+      id                    TINYINT UNSIGNED NOT NULL DEFAULT 1,
+      signatory_name        VARCHAR(120) NULL,
+      signatory_designation VARCHAR(120) NULL,
+      probation_months      SMALLINT NOT NULL DEFAULT 3,
+      notice_probation_days SMALLINT NOT NULL DEFAULT 15,
+      notice_confirmed_days SMALLINT NOT NULL DEFAULT 60,
+      work_location         VARCHAR(160) NULL,
+      work_hours            VARCHAR(200) NULL,
+      governing_city        VARCHAR(80) NULL,
+      offer_validity_days   SMALLINT NOT NULL DEFAULT 7,
+      company_address       VARCHAR(255) NULL,
+      basic_pct             SMALLINT NOT NULL DEFAULT 46,
+      hra_pct               SMALLINT NOT NULL DEFAULT 40,
+      pf_rate_pct           SMALLINT NOT NULL DEFAULT 12,
+      pf_wage_ceiling       INT NOT NULL DEFAULT 15000,
+      professional_tax      INT NOT NULL DEFAULT 200,
+      gratuity_pct          DECIMAL(5,2) NOT NULL DEFAULT 4.81,
+      updated_at            TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`);
+  await conn.query(
+    "INSERT IGNORE INTO hr_settings (id, work_location, work_hours) VALUES (1, 'Remote / as per Company policy', '9 hours per day, Monday to Friday (5-day work week)')"
+  );
+  // Deduction / compensation-structure knobs — added to existing hr_settings rows too.
+  await addColumnIfMissing(conn, 'hr_settings', 'basic_pct', 'SMALLINT NOT NULL DEFAULT 46');
+  await addColumnIfMissing(conn, 'hr_settings', 'hra_pct', 'SMALLINT NOT NULL DEFAULT 40');
+  await addColumnIfMissing(conn, 'hr_settings', 'pf_rate_pct', 'SMALLINT NOT NULL DEFAULT 12');
+  await addColumnIfMissing(conn, 'hr_settings', 'pf_wage_ceiling', 'INT NOT NULL DEFAULT 15000');
+  await addColumnIfMissing(conn, 'hr_settings', 'professional_tax', 'INT NOT NULL DEFAULT 200');
+  await addColumnIfMissing(conn, 'hr_settings', 'gratuity_pct', 'DECIMAL(5,2) NOT NULL DEFAULT 4.81');
+
   await seedRolesAndPermissions(conn);
   await seedLeaveTypes(conn);
   await seedBootstrapSuperAdmin(conn);

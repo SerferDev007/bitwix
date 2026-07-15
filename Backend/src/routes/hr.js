@@ -5,6 +5,7 @@ import { login, activate, logout, me } from '../controllers/hr/authController.js
 import {
   provisionEmployee, listEmployees, getEmployee, assignRole,
   deactivateEmployee, adminResetPassword, readAudit, updateEmployee, getEmployeePayslips,
+  getHrSettings, updateHrSettings,
 } from '../controllers/hr/accountController.js';
 import {
   listLeaveTypes, getBalance, applyLeave, listRequests, approveLeave, rejectLeave,
@@ -49,6 +50,10 @@ router.post('/payroll/runs', authorize('payroll.run'), createPayrollRun);
 router.get('/payroll/runs', authorize('payroll.read.all'), listPayrollRuns);
 router.get('/payroll/runs/:id', authorize('payroll.read.all'), getPayrollRun);
 router.post('/payroll/runs/:id/approve', authorize('payroll.approve'), approvePayrollRun);
+
+// --- Company document settings (offer-letter terms, signatory) ---
+router.get('/settings', authenticated(), getHrSettings);
+router.put('/settings', authorize('user.role.assign'), updateHrSettings);
 
 // --- Audit ---
 router.get('/audit', authorize('audit.read'), readAudit);

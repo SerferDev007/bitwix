@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
-import { Users2, CalendarDays, ScrollText, LogOut, ArrowLeft, IdCard, Banknote, FileText } from "lucide-react";
+import { Users2, CalendarDays, ScrollText, LogOut, ArrowLeft, IdCard, Banknote, FileText, Settings2 } from "lucide-react";
 import { hrApi } from "../lib/hrApi";
 import { useHrAuth } from "./HrRequireAuth";
 import { SuiteNav } from "../components/SuiteNav";
@@ -16,6 +16,7 @@ export function HrLayout() {
     { to: "/hr/leave", label: "Leave", icon: CalendarDays, show: true },
     { to: "/hr/my-documents", label: "My documents", icon: FileText, show: true },
     { to: "/hr/payroll", label: "Payroll", icon: Banknote, show: can("payroll.run") || can("payroll.read.all") },
+    { to: "/hr/settings", label: "Document settings", icon: Settings2, show: can("user.role.assign") },
     { to: "/hr/audit", label: "Audit log", icon: ScrollText, show: can("audit.read") },
   ].filter((item) => item.show);
 

@@ -39,6 +39,7 @@ import { HrLeavePage } from "./hr/HrLeavePage";
 import { HrPayrollPage } from "./hr/HrPayrollPage";
 import { HrAuditPage } from "./hr/HrAuditPage";
 import { MyDocumentsPage } from "./hr/MyDocumentsPage";
+import { HrSettingsPage } from "./hr/HrSettingsPage";
 
 export default function App() {
   return (
@@ -67,6 +68,7 @@ export default function App() {
           <Route path="leave" element={<HrLeavePage />} />
           <Route path="my-documents" element={<MyDocumentsPage />} />
           <Route path="payroll" element={<HrPayrollPage />} />
+          <Route path="settings" element={<HrSettingsPage />} />
           <Route path="audit" element={<HrAuditPage />} />
         </Route>
 

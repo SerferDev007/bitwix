@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { hrApi, type Employee, type Payslip } from "../lib/hrApi";
+import { hrApi, type Employee, type Payslip, type HrSettings } from "../lib/hrApi";
 import { openDocument, openPayslip } from "../lib/hrDocs";
 import { useHrAuth } from "./HrRequireAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -13,15 +13,17 @@ export function MyDocumentsPage() {
   const { user } = useHrAuth();
   const [emp, setEmp] = useState<Employee | null>(null);
   const [payslips, setPayslips] = useState<Payslip[]>([]);
+  const [settings, setSettings] = useState<HrSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user.employeeId) { setError("No employee record is linked to your account."); setLoading(false); return; }
-    Promise.all([hrApi.employee(user.employeeId), hrApi.payslips(user.employeeId)])
-      .then(([e, p]) => {
+    Promise.all([hrApi.employee(user.employeeId), hrApi.payslips(user.employeeId), hrApi.getSettings()])
+      .then(([e, p, s]) => {
         if (e.success && e.data) setEmp(e.data); else setError(e.message || "Could not load your record.");
         if (p.success && p.data) setPayslips(p.data);
+        if (s.success && s.data) setSettings(s.data);
       })
       .catch(() => setError("Unable to reach the server."))
       .finally(() => setLoading(false));
@@ -29,7 +31,7 @@ export function MyDocumentsPage() {
 
   const doc = (type: "offer" | "joining" | "experience") => {
     if (!emp) return;
-    const r = openDocument(type, emp);
+    const r = openDocument(type, emp, settings);
     if (!r.ok) setError(r.message || "Could not open the document.");
   };
   const slip = (run: Payslip) => {
