@@ -25,6 +25,11 @@ export function HrPayrollPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Period to draft (YYYY-MM). Defaults to the current month; one run per period.
+  const [period, setPeriod] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
 
   const load = () => {
     setLoading(true);
@@ -38,8 +43,8 @@ export function HrPayrollPage() {
   const runPayroll = async () => {
     setError(null); setNotice(null); setBusy(true);
     try {
-      const res = await hrApi.createPayrollRun();
-      if (res.success && res.data) { setNotice(`Drafted a run for ${res.data.employees} employee(s).`); load(); }
+      const res = await hrApi.createPayrollRun(period || undefined);
+      if (res.success && res.data) { setNotice(`Drafted the ${res.data.label} run for ${res.data.employees} employee(s).`); load(); }
       else setError(res.message || "Could not run payroll.");
     } finally { setBusy(false); }
   };
@@ -68,9 +73,21 @@ export function HrPayrollPage() {
           <p className="text-muted-foreground text-sm">Run payroll from the active roster; on approval it posts to the finance ledger, split into Cost of Revenue vs Operating Expense by cost center.</p>
         </div>
         {canRun && (
-          <Button onClick={runPayroll} disabled={busy} className="flex items-center gap-2 flex-shrink-0">
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />} Run payroll
-          </Button>
+          <div className="flex items-end gap-2 flex-shrink-0">
+            <div>
+              <label htmlFor="payroll-period" className="block text-xs text-muted-foreground mb-1">Period</label>
+              <input
+                id="payroll-period"
+                type="month"
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <Button onClick={runPayroll} disabled={busy || !period} className="flex items-center gap-2">
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />} Run payroll
+            </Button>
+          </div>
         )}
       </div>
 
